@@ -3,9 +3,10 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from app.database import (
-    db, now_iso, update_error_status, run_investigation_pipeline,
+    db, now_iso, update_error_status,
     is_maintenance_mode,
 )
+from app.services.pipeline import run_investigation_pipeline
 from app.services.telegram import send_simple_message
 
 logger = logging.getLogger("apexguardian.volume_checker")
