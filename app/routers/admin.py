@@ -428,7 +428,7 @@ async def activity_log_page(request: Request, page: int = 1):
     })
 
 
-@router.get("/users", responseClass=HTMLResponse)
+@router.get("/users", response_class=HTMLResponse)
 @require_permission("view_user_stats")
 async def users_page(request: Request):
     stats = get_user_stats()
@@ -439,7 +439,7 @@ async def users_page(request: Request):
     })
 
 
-@router.get("/system", responseClass=HTMLResponse)
+@router.get("/system", response_class=HTMLResponse)
 @require_permission("check_integrations")
 async def system_page(request: Request):
     vercel = await vercel_health()
