@@ -2,23 +2,24 @@
 
 Assistente automatizado de gerenciamento de bugs para o [ApexEnem](https://github.com/Fardinando/ApexEnem).
 
-Recebe denúncias de usuários, monitora logs da Vercel, pesquisa soluções com IA local (Ollama), e gerencia todo o ciclo de correção — da detecção ao deploy — sempre com aprovação humana via Telegram.
+Recebe denúncias de usuários, monitora logs da Vercel, pesquisa soluções com IA (Ollama + fallback Groq), e gerencia todo o ciclo de correção — da detecção ao deploy — sempre com aprovação humana via Telegram.
 
-**Custo:** Zero (exceto sua máquina local para o Ollama)
+**Custo:** Zero (Hugging Face Space + Groq API free tier + Render free tier)
 
 ---
 
 ## 📋 Funcionalidades
 
-- **Pipeline de Denúncia**: Usuários reportam erros com screenshot → ApexGuardian correlaciona com logs da Vercel
+- **Pipeline de Denúncia**: Usuários reportam erros → ApexGuardian correlaciona com logs da Vercel
 - **Monitoramento de Logs**: Polling automático a cada 3 minutos na API da Vercel
 - **Gatilho por Volume**: Erros arquivados com >10 usuários (14d) ou >30 usuários (60d) são reinvestigados
 - **Pesquisa Web**: Busca soluções no DuckDuckGo automaticamente
-- **Análise com IA Local**: Ollama (llama3.1) gera diagnóstico, plano de correção e código corrigido
+- **Análise com IA**: Ollama (primário) + fallback automático para Groq API se Ollama estiver offline
 - **Loop de Feedback no Telegram**: Você aprova, rejeita ou pede refação dos planos
 - **Deploy Automático**: Correção → branch → preview → aprovação → produção
 - **Design Guard**: Proteção absoluta contra alterações de design/CSS
-- **Painel Admin**: Dashboard completo com gráficos, listas, RBAC (supreme, operator, analyst, basic)
+- **Painel Admin**: Dashboard completo com gráficos, RBAC (supreme, operator, analyst, basic)
+- **Deploy 100% gratuito**: Oracle Cloud (Ollama) + Render (app) + Groq (fallback)
 
 ---
 
@@ -30,97 +31,114 @@ Recebe denúncias de usuários, monitora logs da Vercel, pesquisa soluções com
 │  (Vercel)     │                              │  (Render/Local)  │
 └──────────────┘                              └────────┬─────────┘
                                                        │
-              ┌────────────────────────────────────────┤
+              ┌─────────────────────────────────────────┤
               │            │              │            │
               ▼            ▼              ▼            ▼
-         SQLite        Ollama         DuckDuckGo    Vercel API
-         (dados)     (IA local)      (pesquisa)    (logs)
-              │            │                          
-              └────────────┼─────────────────────────┘
-                           │
-                           ▼
-                    Telegram Bot ↔ Você (dev)
+          SQLite      Ollama ──fallback── DuckDuckGo  Vercel API
+          (dados)  (HF Space)   ▶   (pesquisa)    (logs)
+                         │       Groq API
+                         │           (grátis)
+              └──────────┴─────────────────────────────────┘
+                                 │
+                                 ▼
+                          Telegram Bot ↔ Você (dev)
 ```
 
 ---
 
-## 🚀 Setup Rápido
+## 🚀 Setup Passo a Passo
 
 ### Pré-requisitos
 
-- Python 3.11+
-- [Ollama](https://ollama.com) (para IA local)
-- Conta no Telegram + [@BotFather](https://t.me/BotFather)
-- Token da Vercel ([vercel.com/account/tokens](https://vercel.com/account/tokens))
-- Token do GitHub com permissão de push
+- [x] Conta no [Oracle Cloud](https://cloud.oracle.com) (cartão de crédito p/ verificação, não cobra)
+- [x] Conta no [Render](https://render.com) (GitHub login)
+- [x] Conta no [Groq](https://console.groq.com/keys) (fallback grátis)
+- [x] Bot no Telegram [@BotFather](https://t.me/BotFather)
+- [x] Token da Vercel [vercel.com/account/tokens](https://vercel.com/account/tokens)
+- [x] Token do GitHub com permissão de push
 
-### 1. Clone e configure
+---
+
+### Passo 1: Provisionar Ollama no Hugging Face Space
+
+1. Acesse [huggingface.co/new-space](https://huggingface.co/new-space)
+2. Configure:
+
+| Campo | Valor |
+|-------|-------|
+| **Space Name** | `apexguardian-ollama` |
+| **License** | MIT |
+| **SDK** | Docker |
+| **Hardware** | CPU (free — 2 vCPU, 16GB RAM) |
+| **Space Type** | Public |
+
+3. Faça upload dos arquivos da pasta `huggingface-space/`:
+   - `Dockerfile`
+   - `entrypoint.sh`
+   - `README.md`
+
+   Ou use o script automático:
 
 ```bash
-git clone https://github.com/Fardinando/ApexGuardian.git
-cd ApexGuardian
-cp .env.example .env
-# Edite .env com suas credenciais
+bash scripts/setup_hf_space.sh
 ```
 
-### 2. Instale dependências
+4. O Ollama inicia automaticamente e baixa o modelo `llama3.1` (~5 min na primeira vez)
+
+5. Verifique se está pronto:
 
 ```bash
-pip install -r requirements.txt
+curl https://SEU-USER-apexguardian-ollama.hf.space/api/tags
 ```
 
-### 3. Setup do Ollama
+6. **Configure o ping** (HF Space dorme após 48h sem uso):
+   - Adicione no seu monitor de uptime a URL:
+   ```
+   https://SEU-USER-apexguardian-ollama.hf.space/api/tags
+   ```
+   - Intervalo: a cada **30 minutos**
+
+---
+
+### Passo 2: Deploy do ApexGuardian no Render
+
+1. Faça fork/clone deste repositório
+2. Conecte no [Render Dashboard](https://dashboard.render.com) > New Web Service
+3. Escolha o repositório `Fardinando/ApexGuardian`
+4. Configurações:
+
+| Campo | Valor |
+|-------|-------|
+| **Runtime** | Python 3 |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| **Health Check** | `/health` |
+| **Plan** | **Free** |
+
+5. Adicione as variáveis de ambiente (aba Environment):
+
+| Variável | Descrição | Exemplo |
+|----------|-----------|---------|
+| `TELEGRAM_BOT_TOKEN` | Token do @BotFather | `123456:ABC-DEF1234` |
+| `ALLOWED_TELEGRAM_USER_ID` | Seu ID no Telegram | `123456789` |
+| `VERCEL_TOKEN` | Token da Vercel | `abc123...` |
+| `VERCEL_PROJECT_ID` | ID do projeto ApexEnem na Vercel | `prj_xxxxxx` |
+| `GITHUB_TOKEN` | Token do GitHub com permissão de push | `ghp_xxxxxx` |
+| `REPO_URL` | URL do repositório ApexEnem | `https://github.com/Fardinando/ApexEnem.git` |
+| `OLLAMA_HOST` | URL do Ollama no Oracle Cloud | `https://ollama.seusite.com` |
+| `OLLAMA_MODEL` | Modelo Ollama | `llama3.1` |
+| `AI_API_KEY` | Chave Groq (fallback) | `gsk_xxxxxx` |
+| `ADMIN_USER` | Login do admin supreme | `supreme` |
+| `ADMIN_PASS` | Senha do admin supreme | `escolha_uma_senha_forte` |
+| `SESSION_SECRET` | String aleatória para sessões | `64-caracteres-aleatorios` |
+
+---
+
+### Passo 3: Configurar Webhook do Telegram
 
 ```bash
-chmod +x setup_ollama.sh
-./setup_ollama.sh
-```
-
-O script instala:
-- Ollama + modelo llama3.1
-- Cloudflare Tunnel (para expor o Ollama)
-
-### 4. Execute
-
-```bash
-uvicorn main:app --reload --port 8000
-```
-
-### 5. Configure o Webhook do Telegram
-
-```bash
-curl -F "url=https://SEU-URL/webhook/telegram" \
+curl -F "url=https://SEU-APP.onrender.com/webhook/telegram" \
   https://api.telegram.org/bot<SEU_TOKEN>/setWebhook
-```
-
----
-
-## 🌐 Deploy no Render
-
-1. Crie um Web Service no [Render](https://render.com)
-2. Conecte ao repositório `Fardinando/ApexGuardian`
-3. **Build Command:** `pip install -r requirements.txt`
-4. **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
-5. **Health Check Path:** `/health`
-6. Adicione todas as variáveis do `.env` no painel do Render
-
----
-
-## 🎯 Integração com o Frontend ApexEnem
-
-No seu frontend React, adicione um botão "Reportar Erro" que envia:
-
-```typescript
-await fetch("https://SEU-APEXGUARDIAN.onrender.com/webhook/report", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    screenshot_base64: "data:image/png;base64,...",
-    description: "Descrição do erro pelo usuário",
-    timestamp_frontend: Date.now(),
-    user_id_anon: hash_anonimo_do_usuario  // SHA256 do user.id
-  })
-});
 ```
 
 ---
@@ -133,7 +151,7 @@ await fetch("https://SEU-APEXGUARDIAN.onrender.com/webhook/report", {
 | `/status` | Status atual do sistema |
 | `/help` | Lista de comandos |
 
-Responda a notificações com:
+**Responda a notificações com:**
 
 | Resposta | Ação |
 |----------|------|
@@ -145,14 +163,14 @@ Responda a notificações com:
 
 ## 👥 Roles do Painel Admin
 
+Acesse: `https://SEU-APP.onrender.com/admin`
+
 | Role | Acesso |
 |------|--------|
-| **Supreme** | Tudo: gerenciar admins, deletar erros, forçar workers, modo manutenção |
+| **Supreme** | Tudo: gerenciar admins, deletar erros, forçar workers |
 | **Operator** | Corrigir erros, deploy preview, aprovar produção, reverter |
 | **Analyst** | Investigar erros, adicionar manualmente, ver activity logs |
 | **Basic** | Visualizar dashboard e erros (leitura) |
-
-Acesse: `https://SEU-DOMINIO/admin`
 
 ---
 
@@ -160,11 +178,29 @@ Acesse: `https://SEU-DOMINIO/admin`
 
 O ApexGuardian **NUNCA** altera design, CSS, layout ou estilo visual. A proteção opera em 3 camadas:
 
-1. **Prompt**: Ollama recebe instrução explícita para não modificar design
+1. **Prompt**: A IA recebe instrução explícita para não modificar design
 2. **File Blocklist**: Arquivos `.css`, `tailwind.config.*`, `public/*.svg` etc. são protegidos
 3. **Diff Validation**: Antes do commit, o diff é verificado contra padrões de design
 
 Se uma correção tentar alterar design, ela é **bloqueada** e o erro é registrado.
+
+---
+
+## 🔄 Fallback Automático
+
+```
+Ollama online? ──Sim──► Usa Ollama (Oracle Cloud)
+     │
+     ▼ Não
+Groq online? ────Sim──► Usa Groq API (grátis, 30 req/min)
+     │
+     ▼ Não
+Retorna erro amigável
+```
+
+- `OLLAMA_HOST` vazio → usa só fallback
+- `AI_API_KEY` vazio → usa só Ollama
+- Ambos configurados → Ollama primeiro, fallback automático
 
 ---
 
@@ -176,7 +212,12 @@ apexguardian/
 ├── requirements.txt           # Dependências Python
 ├── Dockerfile                 # Deploy containerizado
 ├── .env.example               # Template de variáveis
-├── setup_ollama.sh            # Script de setup do Ollama
+├── huggingface-space/        # Arquivos do HF Space (Ollama)
+│   ├── Dockerfile
+│   ├── entrypoint.sh
+│   └── README.md
+├── scripts/
+│   └── setup_hf_space.sh     # Setup automático do HF Space
 ├── app/
 │   ├── config.py              # Configurações (pydantic-settings)
 │   ├── database.py            # SQLite (6 tabelas + CRUD)
@@ -190,10 +231,10 @@ apexguardian/
 │   ├── services/
 │   │   ├── telegram.py        # Bot Telegram
 │   │   ├── vercel_logs.py     # Vercel API
-│   │   ├── ollama.py          # Ollama client
+│   │   ├── ai_client.py       # IA client (Ollama + fallback Groq)
 │   │   ├── search.py          # DuckDuckGo search
 │   │   ├── pipeline.py        # Orquestrador
-│   │   └── git_ops.py         # Git + deploy
+│   │   └── git_ops.py         # Git + deploy + Design Guard
 │   ├── workers/
 │   │   ├── log_poller.py      # Polling 3min
 │   │   └── volume_checker.py  # Thresholds 1h
@@ -215,7 +256,7 @@ apexguardian/
 | GET | `/admin/errors` | Lista de erros |
 | GET | `/admin/errors/{id}` | Detalhe do erro |
 | GET | `/admin/admins` | Gerenciar admins (supreme) |
-| GET | `/admin/activity` | Activity log (supreme/analyst) |
+| GET | `/admin/activity` | Activity log |
 | GET | `/admin/system` | Status do sistema |
 
 ---

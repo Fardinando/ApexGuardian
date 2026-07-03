@@ -18,7 +18,7 @@ from app.auth import require_permission, get_current_admin, log_action
 from app.services.pipeline import run_investigation_pipeline, run_manual_investigation
 from app.services.git_ops import merge_to_main, rollback_fix
 from app.services.vercel_logs import check_api_health as vercel_health
-from app.services.ollama import check_ollama_health
+from app.services.ai_client import check_ai_health
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates" / "admin")
@@ -443,7 +443,7 @@ async def users_page(request: Request):
 @require_permission("check_integrations")
 async def system_page(request: Request):
     vercel = await vercel_health()
-    ollama = await check_ollama_health()
+    ai_status = await check_ai_health()
     admin_info = get_current_admin(request)
 
     from app.database import get_dashboard_stats, get_errors_by_day
@@ -452,7 +452,7 @@ async def system_page(request: Request):
     return templates.TemplateResponse("system.html", {
         **{"request": request, "admin": admin_info},
         "vercel_status": vercel,
-        "ollama_status": ollama,
+        "ai_status": ai_status,
         "stats": stats,
     })
 

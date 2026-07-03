@@ -5,7 +5,7 @@ import shutil
 from typing import Optional
 
 from app.config import settings
-from app.services.ollama import generate_code_fix
+from app.services.ai_client import generate_code_fix
 from app.services.vercel_logs import deploy_preview, deploy_production
 
 DESIGN_PROTECTED_PATTERNS = [

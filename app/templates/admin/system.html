@@ -3,7 +3,7 @@
 <div class="max-w-5xl mx-auto">
     <h1 class="text-2xl font-bold mb-6">⚙️ Sistema</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="card">
             <h3 class="text-sm font-medium text-gray-400 mb-2">Vercel API</h3>
             <div class="flex items-center gap-2">
@@ -14,14 +14,26 @@
             <p class="text-xs text-gray-500 mt-1">{{ vercel_status.detail }}</p>
             {% endif %}
         </div>
-        <div class="card">
-            <h3 class="text-sm font-medium text-gray-400 mb-2">Ollama ({{ ollama_status.model_loaded|default('desconhecido') }})</h3>
+        <div class="card {{ 'ring-2 ring-green-500' if ai_status.active_provider == 'ollama' else '' }}">
+            <h3 class="text-sm font-medium text-gray-400 mb-2">🟢 Ollama (primário)</h3>
             <div class="flex items-center gap-2">
-                <span class="text-2xl">{{ '✅' if ollama_status.status == 'ok' else '❌' }}</span>
-                <span class="font-bold">{{ ollama_status.status }}</span>
+                <span class="text-2xl">{{ '✅' if ai_status.ollama.status == 'ok' else '❌' }}</span>
+                <span class="font-bold">{{ ai_status.ollama.status }}</span>
             </div>
-            {% if ollama_status.detail %}
-            <p class="text-xs text-gray-500 mt-1">{{ ollama_status.detail }}</p>
+            <p class="text-xs text-gray-500 mt-1">Modelo: {{ ai_status.ollama.model }}</p>
+            {% if ai_status.ollama.detail %}
+            <p class="text-xs text-red-400 mt-1">{{ ai_status.ollama.detail[:80] }}</p>
+            {% endif %}
+        </div>
+        <div class="card {{ 'ring-2 ring-yellow-500' if ai_status.active_provider == 'fallback' else '' }}">
+            <h3 class="text-sm font-medium text-gray-400 mb-2">🟡 Fallback (Groq)</h3>
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">{{ '✅' if ai_status.fallback.status == 'ok' else '❌' }}</span>
+                <span class="font-bold">{{ ai_status.fallback.status }}</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Modelo: {{ ai_status.fallback.model }}</p>
+            {% if ai_status.fallback.detail %}
+            <p class="text-xs text-red-400 mt-1">{{ ai_status.fallback.detail[:80] }}</p>
             {% endif %}
         </div>
         <div class="card">

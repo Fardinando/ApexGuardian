@@ -9,13 +9,21 @@ class Settings(BaseSettings):
     vercel_project_id: str
     github_token: str
     repo_url: str = "https://github.com/Fardinando/ApexEnem.git"
-    ollama_host: str = "http://localhost:11434"
-    ollama_model: str = "llama3.1"
-    admin_user: str = "admin"
+    admin_user: str = "supreme"
     admin_pass: str
     database_path: str = "data/apexguardian.db"
     log_level: str = "INFO"
     session_secret: str = "change-me-to-a-random-string"
+
+    # ─── Ollama (primário) ─────────────────────────────────
+    ollama_host: str = ""
+    ollama_model: str = "llama3.1"
+    ollama_timeout: int = 10
+
+    # ─── Fallback API (Groq, Together, etc) ───────────────
+    ai_api_key: str = ""
+    ai_api_base_url: str = "https://api.groq.com/openai/v1"
+    ai_model: str = "llama3-8b-8192"
 
     @property
     def database_full_path(self) -> Path:

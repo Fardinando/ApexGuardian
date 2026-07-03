@@ -7,7 +7,7 @@ from app.database import (
     update_error_status, increment_fix_attempts, set_cooldown, set_error_give_up,
     get_dashboard_stats, now_iso, hash_error, upsert_error_signature,
 )
-from app.services.ollama import diagnose_error, generate_fix_plan, investigate_error
+from app.services.ai_client import diagnose_error, generate_fix_plan, investigate_error
 from app.services.search import search_error
 from app.services.telegram import send_error_notification, send_urgent_message, send_simple_message
 
