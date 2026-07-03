@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-md">
+        <div class="card text-center">
+            <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-3xl font-bold mx-auto mb-4">AG</div>
+            <h1 class="text-2xl font-bold mb-1">ApexGuardian</h1>
+            <p class="text-gray-400 text-sm mb-8">Painel de Administração</p>
+
+            {% if error %}
+            <div class="bg-red-900/50 border border-red-700 text-red-300 px-4 py-2 rounded-lg mb-4 text-sm">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST" action="/admin/login" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Usuário</label>
+                    <input type="text" name="username" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Senha</label>
+                    <input type="password" name="password" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                </div>
+                <button type="submit" class="btn btn-primary w-full py-2.5">Entrar</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

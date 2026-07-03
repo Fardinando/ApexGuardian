@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">👥 Estatísticas de Usuários</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="card text-center py-8">
+            <div class="text-4xl font-bold text-blue-400">{{ stats.total_users }}</div>
+            <div class="text-sm text-gray-400 mt-2">Usuários Únicos</div>
+        </div>
+        <div class="card text-center py-8">
+            <div class="text-4xl font-bold text-green-400">{{ stats.top_reporters | length }}</div>
+            <div class="text-sm text-gray-400 mt-2">Top Reporters</div>
+        </div>
+        <div class="card text-center py-8">
+            <div class="text-4xl font-bold text-purple-400">{{ stats.total_users }}</div>
+            <div class="text-sm text-gray-400 mt-2">Total Reports</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="text-lg font-semibold mb-4">🏆 Top Reporters</h2>
+        <div class="space-y-2">
+            {% for reporter in stats.top_reporters %}
+            <div class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <span class="text-lg">👤</span>
+                    <span class="font-mono text-sm">{{ reporter.user_id_anon[:20] }}...</span>
+                </div>
+                <span class="font-bold text-blue-400">{{ reporter.count }} reports</span>
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-sm">Nenhum usuário registrado.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+            <a href="/admin/errors" class="text-gray-400 hover:text-white">← Voltar</a>
+            <h1 class="text-2xl font-bold font-mono">#{{ error.hash }}</h1>
+            <span class="badge badge-{{ error.status }} text-sm">{{ error.status }}</span>
+        </div>
+        <div class="flex gap-2">
+            {% if admin.role in ('supreme', 'operator') %}
+            <form method="POST" action="/admin/errors/{{ error.id }}/force-fix" class="inline">
+                <button type="submit" class="btn btn-warning">⚡ Forçar Correção</button>
+            </form>
+            {% endif %}
+            {% if admin.role == 'supreme' %}
+            <form method="POST" action="/admin/errors/{{ error.id }}/delete" class="inline"
+                  onsubmit="return confirm('Tem certeza? Esta ação é irreversível.')">
+                <button type="submit" class="btn btn-danger">🗑️ Deletar</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="card lg:col-span-2">
+            <h2 class="text-lg font-semibold mb-3">🔍 Stack Trace</h2>
+            <pre>{{ error.stack_trace or 'Nenhum stack trace disponível.' }}</pre>
+        </div>
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-3">📋 Informações</h2>
+            <dl class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Origem</dt>
+                    <dd>{{ error.origin }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Status</dt>
+                    <dd><span class="badge badge-{{ error.status }}">{{ error.status }}</span></dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Reports</dt>
+                    <dd class="font-mono">{{ error.total_reports }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Usuários</dt>
+                    <dd class="font-mono">{{ error.unique_users }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Tentativas</dt>
+                    <dd class="font-mono">{{ error.fix_attempts }}/3</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Design Rej.</dt>
+                    <dd class="font-mono">{{ error.design_guard_rejections or 0 }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Primeira vez</dt>
+                    <dd class="text-xs">{{ error.first_seen[:19] }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-400">Última vez</dt>
+                    <dd class="text-xs">{{ error.last_seen[:19] }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    {% if reports %}
+    <div class="card mb-6">
+        <h2 class="text-lg font-semibold mb-4">👥 Reports Relacionados ({{ reports | length }})</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-400 text-xs uppercase border-b border-gray-700">
+                        <th class="text-left py-2 px-3">Usuário</th>
+                        <th class="text-left py-2 px-3">Data</th>
+                        <th class="text-left py-2 px-3">Descrição</th>
+                        <th class="text-center py-2 px-3">Screenshot</th>
+                        <th class="text-center py-2 px-3">Log Match</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in reports %}
+                    <tr class="border-b border-gray-700/50">
+                        <td class="py-2 px-3 font-mono text-xs">{{ r.user_id_anon[:12] }}...</td>
+                        <td class="py-2 px-3 text-xs text-gray-400">{{ r.created_at[:19] }}</td>
+                        <td class="py-2 px-3 max-w-xs truncate text-gray-300">{{ r.description[:80] or '—' }}</td>
+                        <td class="py-2 px-3 text-center">
+                            {% if r.screenshot_base64 %}
+                            <button onclick="showScreenshot('{{ r.id }}')" class="text-blue-400 hover:text-blue-300 text-xs">📷 Ver</button>
+                            <div id="screenshot-{{ r.id }}" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8" onclick="this.classList.add('hidden')">
+                                <img src="{{ r.screenshot_base64 }}" class="max-w-full max-h-full rounded-lg shadow-2xl" onclick="event.stopPropagation()">
+                            </div>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="py-2 px-3 text-center">{{ '✅' if r.matched_log else '❌' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if fixes %}
+    <div class="card">
+        <h2 class="text-lg font-semibold mb-4">🔧 Tentativas de Correção</h2>
+        {% for fix in fixes %}
+        <div class="border border-gray-700 rounded-lg p-4 mb-3 {% if fix.design_guard_blocked %}border-red-700 bg-red-900/10{% endif %}">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-lg font-bold">#{{ fix.attempt }}</span>
+                    <span class="badge badge-{{ 'production' if fix.status == 'approved' else 'cooldown' if fix.status == 'rolled_back' else 'waiting_approval' }}">
+                        {{ fix.status }}
+                    </span>
+                    {% if fix.design_guard_blocked %}
+                    <span class="badge bg-red-900 text-red-300">🚫 Design Guard</span>
+                    {% endif %}
+                </div>
+                <div class="text-xs text-gray-400">{{ fix.created_at[:19] }}</div>
+            </div>
+            {% if fix.branch_name %}
+            <div class="text-xs font-mono text-gray-400 mb-2">Branch: {{ fix.branch_name }}</div>
+            {% endif %}
+            {% if fix.preview_url %}
+            <a href="https://{{ fix.preview_url }}" target="_blank" class="text-xs text-blue-400 hover:underline">
+                🔗 Preview: {{ fix.preview_url }}
+            </a>
+            {% endif %}
+            {% if fix.plan_md %}
+            <div class="mt-2">
+                <details>
+                    <summary class="text-sm text-gray-400 cursor-pointer hover:text-white">📄 Ver Plano</summary>
+                    <pre class="mt-2 text-gray-300 whitespace-pre-wrap text-xs">{{ fix.plan_md }}</pre>
+                </details>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if error.status == 'preview' and admin.role in ('supreme', 'operator') %}
+        <div class="flex gap-3 mt-4">
+            <form method="POST" action="/admin/errors/{{ error.id }}/approve-production">
+                <button type="submit" class="btn btn-success">✅ Aprovar para Produção</button>
+            </form>
+            <form method="POST" action="/admin/errors/{{ error.id }}/rollback">
+                <button type="submit" class="btn btn-danger">🔄 Reverter</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if error.status == 'cooldown' or error.status == 'give_up' %}
+    <div class="card mt-6 border-red-700 bg-red-900/10">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🚨</span>
+            <div>
+                <h3 class="font-semibold">
+                    {% if error.status == 'cooldown' %}Erro em Cooldown{% else %}Erro Abandonado{% endif %}
+                </h3>
+                <p class="text-sm text-gray-400">
+                    {% if error.status == 'cooldown' %}
+                    Em pausa por 24h após {{ error.fix_attempts }} tentativas de correção.
+                    {% else %}
+                    Erro arquivado definitivamente após {{ error.fix_attempts }} tentativas.
+                    {% endif %}
+                </p>
+            </div>
+            {% if admin.role == 'supreme' %}
+            <form method="POST" action="/admin/errors/{{ error.id }}/reopen" class="ml-auto">
+                <button type="submit" class="btn btn-warning">🔄 Reabrir</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ApexGuardian Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .badge { @apply px-2 py-0.5 rounded-full text-xs font-medium; }
+        .badge-new { @apply bg-blue-100 text-blue-800; }
+        .badge-analyzing { @apply bg-yellow-100 text-yellow-800; }
+        .badge-waiting_approval { @apply bg-orange-100 text-orange-800; }
+        .badge-preview { @apply bg-purple-100 text-purple-800; }
+        .badge-production { @apply bg-green-100 text-green-800; }
+        .badge-archived_no_log { @apply bg-gray-100 text-gray-600; }
+        .badge-cooldown { @apply bg-red-100 text-red-800; }
+        .badge-give_up { @apply bg-red-200 text-red-900; }
+        .badge-ignored { @apply bg-gray-200 text-gray-500; }
+        .sidebar-link { @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors; }
+        .sidebar-link:hover { @apply bg-gray-700/50 text-white; }
+        .sidebar-link.active { @apply bg-blue-600 text-white; }
+        .card { @apply bg-gray-800 rounded-xl border border-gray-700 p-6; }
+        .btn { @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
+        .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
+        .btn-danger { @apply bg-red-600 text-white hover:bg-red-700; }
+        .btn-warning { @apply bg-yellow-600 text-white hover:bg-yellow-700; }
+        .btn-success { @apply bg-green-600 text-white hover:bg-green-700; }
+        .btn-ghost { @apply bg-gray-700 text-gray-300 hover:bg-gray-600; }
+        pre { @apply bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <div class="flex min-h-screen">
+        {% if admin %}
+        <aside class="w-64 bg-gray-800 border-r border-gray-700 p-4 flex flex-col">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-lg font-bold">AG</div>
+                <div>
+                    <div class="font-bold text-sm">ApexGuardian</div>
+                    <div class="text-xs text-gray-400">v1.0.0</div>
+                </div>
+            </div>
+
+            <nav class="flex-1 space-y-1">
+                <a href="/admin" class="sidebar-link {% if request.url.path == '/admin' %}active{% endif %}">
+                    <span>📊</span> Dashboard
+                </a>
+                <a href="/admin/errors" class="sidebar-link {% if '/errors' in request.url.path %}active{% endif %}">
+                    <span>🔍</span> Todos Erros
+                </a>
+                <a href="/admin/errors/active" class="sidebar-link">
+                    <span>🟡</span> Ativos
+                </a>
+                <a href="/admin/errors/preview" class="sidebar-link">
+                    <span>🟣</span> Em Preview
+                </a>
+                <a href="/admin/errors/resolved" class="sidebar-link">
+                    <span>✅</span> Resolvidos
+                </a>
+                <div class="border-t border-gray-700 my-2"></div>
+                <a href="/admin/errors/fully-archived" class="sidebar-link">
+                    <span>📦</span> Arquivados Completos
+                </a>
+                <a href="/admin/errors/partially-archived" class="sidebar-link">
+                    <span>📦</span> Arquivados Parciais
+                </a>
+                <a href="/admin/errors/cooldown" class="sidebar-link">
+                    <span>🔴</span> Em Cooldown
+                </a>
+                <a href="/admin/errors/ignored" class="sidebar-link">
+                    <span>⏭️</span> Ignorados
+                </a>
+                {% if admin.role in ('supreme', 'analyst') %}
+                <div class="border-t border-gray-700 my-2"></div>
+                <a href="/admin/errors/add" class="sidebar-link">
+                    <span>➕</span> Adicionar Erro
+                </a>
+                {% endif %}
+                {% if admin.role in ('supreme', 'operator', 'analyst') %}
+                <a href="/admin/users" class="sidebar-link">
+                    <span>👥</span> Usuários
+                </a>
+                {% endif %}
+                {% if admin.role == 'supreme' or admin.role == 'analyst' %}
+                <a href="/admin/activity" class="sidebar-link">
+                    <span>📋</span> Atividade
+                </a>
+                {% endif %}
+                {% if admin.role in ('supreme', 'operator', 'analyst') %}
+                <a href="/admin/system" class="sidebar-link">
+                    <span>⚙️</span> Sistema
+                </a>
+                {% endif %}
+                {% if admin.role == 'supreme' %}
+                <div class="border-t border-gray-700 my-2"></div>
+                <a href="/admin/admins" class="sidebar-link">
+                    <span>👤</span> Admins
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="border-t border-gray-700 pt-4 mt-4">
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-sm font-bold">
+                        {{ admin.username[:2].upper() }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate">{{ admin.username }}</div>
+                        <div class="text-xs text-gray-400">{{ admin.role }}</div>
+                    </div>
+                    <a href="/admin/logout" class="text-gray-400 hover:text-white text-sm" title="Sair">🚪</a>
+                </div>
+            </div>
+        </aside>
+        {% endif %}
+
+        <main class="flex-1 p-6 overflow-y-auto">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">📊 Dashboard</h1>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
+        <div class="card text-center py-4">
+            <div class="text-3xl font-bold text-blue-400">{{ stats.total }}</div>
+            <div class="text-xs text-gray-400 mt-1">Total</div>
+        </div>
+        <div class="card text-center py-4">
+            <div class="text-3xl font-bold text-yellow-400">{{ stats.active }}</div>
+            <div class="text-xs text-gray-400 mt-1">Ativos</div>
+        </div>
+        <div class="card text-center py-4">
+            <div class="text-3xl font-bold text-purple-400">{{ stats.preview }}</div>
+            <div class="text-xs text-gray-400 mt-1">Preview</div>
+        </div>
+        <div class="card text-center py-4">
+            <div class="text-3xl font-bold text-green-400">{{ stats.resolved }}</div>
+            <div class="text-xs text-gray-400 mt-1">Resolvidos</div>
+        </div>
+        <div class="card text-center py-4">
+            <div class="text-3xl font-bold text-gray-400">{{ stats.fully_archived }}</div>
+            <div class="text-xs text-gray-400 mt-1">F. Arch.</div>
+        </div>
+        <div class="card text-center py-4">
+            <div class="text-3xl font-bold text-indigo-400">{{ stats.partially_archived }}</div>
+            <div class="text-xs text-gray-400 mt-1">P. Arch.</div>
+        </div>
+        <div class="card text-center py-4">
+            <div class="text-3xl font-bold text-red-400">{{ stats.cooldown }}</div>
+            <div class="text-xs text-gray-400 mt-1">Cooldown</div>
+        </div>
+        <div class="card text-center py-4">
+            <div class="text-3xl font-bold text-gray-500">{{ stats.ignored }}</div>
+            <div class="text-xs text-gray-400 mt-1">Ignorados</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4">📈 Erros por Dia (30 dias)</h2>
+            <canvas id="errorsChart" height="200"></canvas>
+        </div>
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4">🥧 Distribuição por Status</h2>
+            <canvas id="statusChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4">🏆 Top 5 Erros</h2>
+            <div class="space-y-3">
+                {% for err in top_errors %}
+                <a href="/admin/errors/{{ err.id }}" class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate">{{ err.description[:80] or 'Sem descrição' }}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">#{{ err.hash }}</div>
+                    </div>
+                    <div class="flex items-center gap-3 ml-4">
+                        <span class="badge badge-{{ err.status }}">{{ err.status }}</span>
+                        <span class="text-sm font-bold text-blue-400">{{ err.report_count }}</span>
+                    </div>
+                </a>
+                {% else %}
+                <p class="text-gray-500 text-sm">Nenhum erro registrado.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card">
+            <h2 class="text-lg font-semibold mb-4">📋 Atividade Recente</h2>
+            <div class="space-y-2">
+                {% for act in recent_activity %}
+                <div class="flex items-start gap-3 p-2 text-sm">
+                    <span class="mt-0.5">
+                        {% if act.type == 'error' %}🆕{% else %}🔧{% endif %}
+                    </span>
+                    <div>
+                        <div class="text-gray-200">{{ act.title[:60] }}</div>
+                        <div class="text-xs text-gray-500">{{ act.detail }} · {{ act.timestamp[:19] }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm">Nenhuma atividade.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const days = {{ errors_by_day | map(attribute='day') | list | tojson }};
+const counts = {{ errors_by_day | map(attribute='count') | list | tojson }};
+
+new Chart(document.getElementById('errorsChart'), {
+    type: 'line',
+    data: {
+        labels: days,
+        datasets: [{
+            label: 'Erros',
+            data: counts,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.1)',
+            fill: true,
+            tension: 0.3,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+        }
+    }
+});
+
+new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Ativos', 'Preview', 'Resolvidos', 'F. Arch', 'P. Arch', 'Cooldown', 'Ignorados'],
+        datasets: [{
+            data: [{{ stats.active }}, {{ stats.preview }}, {{ stats.resolved }}, {{ stats.fully_archived }}, {{ stats.partially_archived }}, {{ stats.cooldown }}, {{ stats.ignored }}],
+            backgroundColor: ['#eab308', '#a855f7', '#22c55e', '#9ca3af', '#6366f1', '#ef4444', '#6b7280'],
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', boxWidth: 12 } } }
+    }
+});
+</script>
+{% endblock %}

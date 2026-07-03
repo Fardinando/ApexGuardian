@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">📋 Activity Log dos Administradores</h1>
+
+    <div class="card p-0 overflow-hidden">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-gray-700/50 text-gray-400 uppercase text-xs">
+                    <th class="text-left px-4 py-3">Data/Hora</th>
+                    <th class="text-left px-4 py-3">Admin</th>
+                    <th class="text-left px-4 py-3">Ação</th>
+                    <th class="text-left px-4 py-3">Alvo</th>
+                    <th class="text-left px-4 py-3">Detalhes</th>
+                    <th class="text-left px-4 py-3">IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for act in activities %}
+                <tr class="border-t border-gray-700">
+                    <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{{ act.timestamp[:19] }}</td>
+                    <td class="px-4 py-3 font-medium">{{ act.admin_name or '—' }}</td>
+                    <td class="px-4 py-3">
+                        <span class="badge {% if 'delete' in act.action or 'ban' in act.action %}bg-red-900 text-red-300{% elif 'add' in act.action or 'create' in act.action %}bg-green-900 text-green-300{% else %}bg-gray-700 text-gray-300{% endif %}">
+                            {{ act.action }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-400">{{ act.target_type or '—' }}</td>
+                    <td class="px-4 py-3 text-xs text-gray-400 max-w-xs truncate">{{ act.target_id or act.details[:80] if act.details else '—' }}</td>
+                    <td class="px-4 py-3 text-xs text-gray-500">{{ act.ip_address or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhuma atividade registrada.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="flex justify-center gap-2 mt-4">
+        {% for p in range(1, total_pages + 1) %}
+        <a href="?page={{ p }}"
+           class="px-3 py-1 rounded {% if p == page %}bg-blue-600 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
+            {{ p }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

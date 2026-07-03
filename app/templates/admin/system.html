@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">⚙️ Sistema</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="card">
+            <h3 class="text-sm font-medium text-gray-400 mb-2">Vercel API</h3>
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">{{ '✅' if vercel_status.status == 'ok' else '❌' }}</span>
+                <span class="font-bold">{{ vercel_status.status }}</span>
+            </div>
+            {% if vercel_status.detail %}
+            <p class="text-xs text-gray-500 mt-1">{{ vercel_status.detail }}</p>
+            {% endif %}
+        </div>
+        <div class="card">
+            <h3 class="text-sm font-medium text-gray-400 mb-2">Ollama ({{ ollama_status.model_loaded|default('desconhecido') }})</h3>
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">{{ '✅' if ollama_status.status == 'ok' else '❌' }}</span>
+                <span class="font-bold">{{ ollama_status.status }}</span>
+            </div>
+            {% if ollama_status.detail %}
+            <p class="text-xs text-gray-500 mt-1">{{ ollama_status.detail }}</p>
+            {% endif %}
+        </div>
+        <div class="card">
+            <h3 class="text-sm font-medium text-gray-400 mb-2">Base de Dados</h3>
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">✅</span>
+                <span class="font-bold">{{ stats.total }} erros</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">{{ stats.total_users }} usuários únicos</p>
+        </div>
+    </div>
+
+    <div class="card mb-6">
+        <h2 class="text-lg font-semibold mb-4">⚡ Ações do Sistema</h2>
+        <div class="flex flex-wrap gap-3">
+            <form method="POST" action="/admin/system/force-poll">
+                <button type="submit" class="btn btn-primary">🔄 Forçar Verificação de Logs</button>
+            </form>
+            <form method="POST" action="/admin/system/force-volume">
+                <button type="submit" class="btn btn-primary">📊 Forçar Verificação de Volume</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="text-lg font-semibold mb-4">📊 Estatísticas do Sistema</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <div class="text-gray-400">Total Erros</div>
+                <div class="text-xl font-bold">{{ stats.total }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Ativos</div>
+                <div class="text-xl font-bold text-yellow-400">{{ stats.active }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Em Preview</div>
+                <div class="text-xl font-bold text-purple-400">{{ stats.preview }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Resolvidos</div>
+                <div class="text-xl font-bold text-green-400">{{ stats.resolved }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Arquivados Completos</div>
+                <div class="text-xl font-bold">{{ stats.fully_archived }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Arquivados Parciais</div>
+                <div class="text-xl font-bold text-indigo-400">{{ stats.partially_archived }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Em Cooldown</div>
+                <div class="text-xl font-bold text-red-400">{{ stats.cooldown }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Ignorados</div>
+                <div class="text-xl font-bold text-gray-500">{{ stats.ignored }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">{{ section_title or '🔍 Todos os Erros' }}</h1>
+        <a href="/admin/errors/add" class="btn btn-primary">➕ Adicionar Erro</a>
+    </div>
+
+    <form class="flex gap-3 mb-6">
+        <input type="text" name="search" value="{{ filter_search or '' }}" placeholder="Buscar por hash, descrição ou stack trace..."
+               class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <select name="status" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none">
+            <option value="">Todos status</option>
+            <option value="new" {% if filter_status == 'new' %}selected{% endif %}>Novo</option>
+            <option value="analyzing" {% if filter_status == 'analyzing' %}selected{% endif %}>Analisando</option>
+            <option value="waiting_approval" {% if filter_status == 'waiting_approval' %}selected{% endif %}>Aguardando</option>
+            <option value="preview" {% if filter_status == 'preview' %}selected{% endif %}>Preview</option>
+            <option value="production" {% if filter_status == 'production' %}selected{% endif %}>Produção</option>
+            <option value="archived_no_log" {% if filter_status == 'archived_no_log' %}selected{% endif %}>Arquivado</option>
+            <option value="cooldown" {% if filter_status == 'cooldown' %}selected{% endif %}>Cooldown</option>
+            <option value="give_up" {% if filter_status == 'give_up' %}selected{% endif %}>Desistiu</option>
+            <option value="ignored" {% if filter_status == 'ignored' %}selected{% endif %}>Ignorado</option>
+        </select>
+        <select name="origin" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm outline-none">
+            <option value="">Todas origens</option>
+            <option value="user_report" {% if filter_origin == 'user_report' %}selected{% endif %}>Usuário</option>
+            <option value="vercel_log" {% if filter_origin == 'vercel_log' %}selected{% endif %}>Log Vercel</option>
+            <option value="volume_trigger" {% if filter_origin == 'volume_trigger' %}selected{% endif %}>Volume</option>
+            <option value="manual_input" {% if filter_origin == 'manual_input' %}selected{% endif %}>Manual</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="/admin/errors" class="btn btn-ghost">Limpar</a>
+    </form>
+
+    <div class="card p-0 overflow-hidden">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-gray-700/50 text-gray-400 uppercase text-xs">
+                    <th class="text-left px-4 py-3">Hash</th>
+                    <th class="text-left px-4 py-3">Descrição</th>
+                    <th class="text-left px-4 py-3">Origem</th>
+                    <th class="text-left px-4 py-3">Status</th>
+                    <th class="text-center px-4 py-3">Reports</th>
+                    <th class="text-center px-4 py-3">Fixes</th>
+                    <th class="text-left px-4 py-3">Visto</th>
+                    <th class="text-right px-4 py-3">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for err in errors %}
+                <tr class="border-t border-gray-700 hover:bg-gray-700/30 transition-colors">
+                    <td class="px-4 py-3 font-mono text-xs text-blue-400">#{{ err.hash }}</td>
+                    <td class="px-4 py-3 max-w-xs">
+                        <div class="truncate">{{ err.description[:100] or err.stack_trace[:100] or '—' }}</div>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-400">{{ err.origin }}</td>
+                    <td class="px-4 py-3"><span class="badge badge-{{ err.status }}">{{ err.status }}</span></td>
+                    <td class="px-4 py-3 text-center font-mono text-sm">{{ err.report_count }}</td>
+                    <td class="px-4 py-3 text-center font-mono text-sm">{{ err.fix_attempts }}</td>
+                    <td class="px-4 py-3 text-xs text-gray-400">{{ err.last_seen[:10] }}</td>
+                    <td class="px-4 py-3 text-right">
+                        <a href="/admin/errors/{{ err.id }}" class="btn btn-ghost text-xs py-1 px-2">Ver</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-center py-8 text-gray-500">Nenhum erro encontrado.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-between mt-4 text-sm">
+        <div class="text-gray-400">{{ total }} erros encontrados</div>
+        <div class="flex gap-2">
+            {% for p in range(1, total_pages + 1) %}
+            <a href="?page={{ p }}&status={{ filter_status or '' }}&origin={{ filter_origin or '' }}&search={{ filter_search or '' }}"
+               class="px-3 py-1 rounded {% if p == page %}bg-blue-600 text-white{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}">
+                {{ p }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

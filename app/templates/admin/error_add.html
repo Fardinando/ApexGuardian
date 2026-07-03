@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">🐛 Adicionar Erro para Investigação</h1>
+
+    {% if result %}
+    <div class="card mb-6 {% if result.is_real_bug %}border-yellow-600 bg-yellow-900/10{% else %}border-green-700 bg-green-900/10{% endif %}">
+        <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">{{ '⚠️' if result.is_real_bug else '✅' }}</span>
+            <div>
+                <h3 class="font-semibold">
+                    {% if result.is_real_bug %}Erro Real Detectado{% else %}Falso Positivo{% endif %}
+                </h3>
+                <p class="text-sm text-gray-400">Confiança: {{ result.confidence }}%</p>
+            </div>
+        </div>
+        <p class="text-sm text-gray-300 mb-2">{{ result.reason }}</p>
+        {% if result.error_id %}
+        <a href="/admin/errors/{{ result.error_id }}" class="text-sm text-blue-400 hover:underline">Ver erro #{{ result.error_id }}</a>
+        {% endif %}
+        <p class="text-sm text-gray-400 mt-2">{{ result.message }}</p>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <p class="text-sm text-gray-400 mb-6">
+            Cole o stack trace ou descreva o erro abaixo. A IA do ApexGuardian irá investigar
+            e determinar se é um problema real que merece correção ou um falso positivo.
+        </p>
+
+        <form method="POST" action="/admin/errors/add" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-2">Stack Trace / Descrição do Erro *</label>
+                <textarea name="stack_trace" rows="8" required
+                          class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                          placeholder="Cole o stack trace completo ou descreva o erro detalhadamente..."></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">URL opcional (página onde ocorreu)</label>
+                <input type="url" name="url"
+                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                       placeholder="https://apexenem.vercel.app/...">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Contexto adicional (opcional)</label>
+                <textarea name="context" rows="3"
+                          class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                          placeholder="Descreva quando/como o erro acontece..."></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button type="submit" class="btn btn-primary">🔍 Investigar</button>
+                <a href="/admin/errors" class="btn btn-ghost">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
