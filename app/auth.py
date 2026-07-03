@@ -1,4 +1,5 @@
 from fastapi import Request, HTTPException, status
+from fastapi.responses import RedirectResponse
 from functools import wraps
 from typing import Callable
 import secrets
@@ -110,6 +111,9 @@ def require_permission(permission: str):
 
             admin = get_current_admin(request)
             if not admin:
+                accept = request.headers.get("accept", "")
+                if "text/html" in accept:
+                    return RedirectResponse(url="/admin/login", status_code=302)
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Not authenticated",
