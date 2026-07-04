@@ -48,6 +48,7 @@
                             </select>
                             <button type="submit" class="btn btn-ghost text-xs py-1 px-2">↕️</button>
                         </form>
+                        <a href="/admin/admins/{{ a.id }}/password" class="btn btn-ghost text-xs py-1 px-2 inline-block">🔑</a>
                         {% if a.is_active %}
                         <form method="POST" action="/admin/admins/{{ a.id }}/ban" class="inline">
                             <button type="submit" class="btn btn-danger text-xs py-1 px-2">🗑️ Banir</button>

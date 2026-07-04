@@ -446,6 +446,15 @@ def get_recent_activity(limit: int = 10) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def get_admin_by_id(admin_id: int) -> Optional[dict]:
+    with db() as conn:
+        row = conn.execute(
+            "SELECT id, username, role, is_active FROM admin_users WHERE id = ?",
+            (admin_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
 def get_admin_list() -> list[dict]:
     with db() as conn:
         rows = conn.execute(
@@ -469,6 +478,11 @@ def create_admin(username: str, password_hash: str, role: str, created_by: int) 
 def update_admin_role(admin_id: int, new_role: str):
     with db() as conn:
         conn.execute("UPDATE admin_users SET role = ? WHERE id = ?", (new_role, admin_id))
+
+
+def update_admin_password(admin_id: int, password_hash: str):
+    with db() as conn:
+        conn.execute("UPDATE admin_users SET password_hash = ? WHERE id = ?", (password_hash, admin_id))
 
 
 def toggle_admin_active(admin_id: int, active: bool):
