@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class ReportIn(BaseModel):
-    screenshot_base64: str
+    screenshot_base64: Optional[str] = ""
     description: str
     timestamp_frontend: float
     user_id_anon: str
