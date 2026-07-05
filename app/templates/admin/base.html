@@ -71,23 +71,23 @@
             <a href="/admin/errors/ignored" class="sidebar-link">
                 <span>⏭️</span> Ignorados
             </a>
-            {% if admin.role in ('supreme', 'analyst') %}
+            {% if admin.role in ('supreme', 'sub_supreme', 'analyst') %}
             <div class="border-t border-gray-700 my-2"></div>
             <a href="/admin/errors/add" class="sidebar-link">
                 <span>➕</span> Adicionar Erro
             </a>
             {% endif %}
-            {% if admin.role in ('supreme', 'operator', 'analyst') %}
+            {% if admin.role in ('supreme', 'sub_supreme', 'operator', 'analyst', 'alto_adm') %}
             <a href="/admin/users" class="sidebar-link">
                 <span>👥</span> Usuários
             </a>
             {% endif %}
-            {% if admin.role == 'supreme' or admin.role == 'analyst' %}
+            {% if admin.role in ('supreme', 'sub_supreme', 'analyst', 'alto_adm') %}
             <a href="/admin/activity" class="sidebar-link">
                 <span>📋</span> Atividade
             </a>
             {% endif %}
-            {% if admin.role in ('supreme', 'operator', 'analyst') %}
+            {% if admin.role in ('supreme', 'sub_supreme', 'operator', 'analyst', 'alto_adm') %}
             <a href="/admin/system" class="sidebar-link">
                 <span>⚙️</span> Sistema
             </a>
@@ -107,7 +107,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="text-sm font-medium truncate">{{ admin.username }}</div>
-                    <div class="text-xs text-gray-400">{{ admin.role }}</div>
+                    <div class="text-xs text-gray-400">{{ admin.role|role_label }}</div>
                 </div>
                 <div class="flex gap-1">
                     <a href="/admin/password" class="text-gray-400 hover:text-white text-sm" title="Trocar senha">🔑</a>

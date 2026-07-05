@@ -55,7 +55,7 @@
             <form method="POST" action="/admin/system/force-volume">
                 <button type="submit" class="btn btn-primary">📊 Forçar Verificação de Volume</button>
             </form>
-            {% if admin.role == 'supreme' %}
+            {% if admin.role in ('supreme', 'sub_supreme') %}
             <form method="POST" action="/admin/system/maintenance-toggle">
                 <button type="submit" class="btn {{ 'btn-success' if not maintenance_mode else 'btn-warning' }}">
                     {{ '🔒 Ativar Manutenção' if not maintenance_mode else '🔓 Desativar Manutenção' }}

@@ -26,6 +26,24 @@ from app.services.maintenance import notify_and_toggle
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates" / "admin")
 
+_ROLE_LABELS = {
+    "supreme": "ADM Supreme",
+    "sub_supreme": "ADM Supreme",
+    "alto_adm": "Alto ADM",
+    "operator": "Operador",
+    "analyst": "Analista",
+    "basic": "Básico",
+}
+
+
+def role_label(role: str, viewer_role: str = None) -> str:
+    if role == "sub_supreme" and viewer_role == "supreme":
+        return "SubADM Supreme"
+    return _ROLE_LABELS.get(role, role)
+
+
+templates.env.filters["role_label"] = role_label
+
 
 def _admin_context(request: Request) -> dict:
     admin = get_current_admin(request)
@@ -393,7 +411,7 @@ async def admin_add_action(
 @router.post("/admins/{admin_id}/change-role")
 @require_permission("change_admin_role")
 async def admin_change_role(request: Request, admin_id: int, role: str = Form(...)):
-    if role not in ("supreme", "operator", "analyst", "basic"):
+    if role not in ("supreme", "sub_supreme", "alto_adm", "operator", "analyst", "basic"):
         raise HTTPException(status_code=400, detail="Role inválida")
     update_admin_role(admin_id, role)
     await log_action(request, "change_role", "admin", str(admin_id),
