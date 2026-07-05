@@ -116,14 +116,10 @@
             </div>
         </div>
     </aside>
+    {% endif %}
 
-    <main class="ml-64 p-6 min-h-screen">
-        {% block content %}{% endblock %}
-    </main>
-    {% else %}
-    <div class="min-h-screen">
+    <div class="{% if admin %}ml-64{% endif %} p-6 min-h-screen">
         {% block content %}{% endblock %}
     </div>
-    {% endif %}
 </body>
 </html>
