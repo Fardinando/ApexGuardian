@@ -16,8 +16,14 @@ def get_connection():
     if settings.use_turso:
         import libsql
         conn = libsql.connect(settings.turso_db_url, auth_token=settings.turso_auth_token)
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except Exception:
+            pass
+        try:
+            conn.execute("PRAGMA foreign_keys=ON")
+        except Exception:
+            pass
         return _TursoConnection(conn)
     import sqlite3
     conn = sqlite3.connect(str(get_db_path()))
