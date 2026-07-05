@@ -13,7 +13,7 @@
                 <button type="submit" class="btn btn-warning">⚡ Forçar Correção</button>
             </form>
             {% endif %}
-            {% if admin.role == 'supreme' %}
+            {% if admin.role in ('supreme', 'sub_supreme') %}
             <form method="POST" action="/admin/errors/{{ error.id }}/delete" class="inline"
                   onsubmit="return confirm('Tem certeza? Esta ação é irreversível.')">
                 <button type="submit" class="btn btn-danger">🗑️ Deletar</button>
