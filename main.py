@@ -4,9 +4,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from app.config import settings
 from app.database import init_db, seed_admin, is_maintenance_mode
+from app.services.maintenance import start_reminder
 from app.routers import health, reports, telegram_webhook, admin
 from app.workers.log_poller import poll_logs_loop
 from app.workers.volume_checker import check_volume_loop
@@ -32,6 +34,10 @@ async def lifespan(app: FastAPI):
 
     if is_maintenance_mode():
         logger.warning("Sistema em modo de manutenção!")
+        start_reminder()
+        from app.services.maintenance import send_maintenance_alert
+        import asyncio
+        asyncio.create_task(send_maintenance_alert(True))
 
     yield
 
@@ -54,6 +60,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/admin", status_code=302)
 
 app.include_router(health.router)
 app.include_router(reports.router)

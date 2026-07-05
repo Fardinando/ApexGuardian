@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     ai_api_base_url: str = "https://api.groq.com/openai/v1"
     ai_model: str = "llama3-8b-8192"
 
+    # ─── Turso (banco persistente) ────────────────────────
+    turso_db_url: str = ""
+    turso_auth_token: str = ""
+
     @property
     def database_full_path(self) -> Path:
         return Path(self.database_path).resolve()
@@ -32,6 +36,10 @@ class Settings(BaseSettings):
     @property
     def repo_name(self) -> str:
         return self.repo_url.rstrip("/").split("/")[-1].replace(".git", "")
+
+    @property
+    def use_turso(self) -> bool:
+        return bool(self.turso_db_url and self.turso_auth_token)
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

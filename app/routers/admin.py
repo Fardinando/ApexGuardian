@@ -20,6 +20,8 @@ from app.services.pipeline import run_investigation_pipeline, run_manual_investi
 from app.services.git_ops import merge_to_main, rollback_fix
 from app.services.vercel_logs import check_api_health as vercel_health
 from app.services.ai_client import check_ai_health
+from app.database import set_maintenance_mode, is_maintenance_mode
+from app.services.maintenance import notify_and_toggle
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=Path(__file__).parent.parent / "templates" / "admin")
@@ -476,6 +478,7 @@ async def system_page(request: Request):
         "vercel_status": vercel,
         "ai_status": ai_status,
         "stats": stats,
+        "maintenance_mode": is_maintenance_mode(),
     })
 
 
@@ -496,4 +499,15 @@ async def system_force_volume(request: Request):
     from app.workers.volume_checker import check_volume_loop
     import asyncio
     asyncio.create_task(check_volume_loop(1))
+    return RedirectResponse("/admin/system", status_code=302)
+
+
+@router.post("/system/maintenance-toggle")
+@require_permission("maintenance_mode")
+async def system_maintenance_toggle(request: Request):
+    active = not is_maintenance_mode()
+    set_maintenance_mode(active)
+    await log_action(request, "maintenance_toggle", "system", None,
+                     {"active": str(active)})
+    asyncio.create_task(notify_and_toggle(active))
     return RedirectResponse("/admin/system", status_code=302)

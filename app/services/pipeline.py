@@ -6,6 +6,7 @@ from app.database import (
     get_fix_attempts_for_error, create_fix_attempt, update_fix_attempt,
     update_error_status, increment_fix_attempts, set_cooldown, set_error_give_up,
     get_dashboard_stats, now_iso, hash_error, upsert_error_signature,
+    is_maintenance_mode,
 )
 from app.services.ai_client import diagnose_error, generate_fix_plan, investigate_error
 from app.services.search import search_error
@@ -15,6 +16,9 @@ _active_fixes: dict[int, dict] = {}
 
 
 async def run_investigation_pipeline(error_sig_id: int):
+    if is_maintenance_mode():
+        return
+
     error = get_error_by_id(error_sig_id)
     if not error:
         return
@@ -166,6 +170,9 @@ async def handle_fix_feedback(error_id: int, action: str):
 
 async def run_manual_investigation(stack_trace: str, description: str = "",
                                     url: str = "", context: str = "") -> dict:
+    if is_maintenance_mode():
+        return {"is_real_bug": False, "confidence": 0, "reason": "Modo de manutenção ativo",
+                "error_id": None, "message": "Sistema em manutenção. Tente novamente mais tarde."}
     query = f"{stack_trace[:200]} {description[:100]} Next.js React Vercel"
     search_results = await search_error(query)
     result = await investigate_error(stack_trace, description, search_results)

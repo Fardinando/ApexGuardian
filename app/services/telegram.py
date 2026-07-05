@@ -88,10 +88,12 @@ async def process_telegram_update(update: dict):
             "Use /status para ver o estado atual."
         )
     elif text == "/status":
-        from app.database import get_dashboard_stats
+        from app.database import get_dashboard_stats, is_maintenance_mode
         stats = get_dashboard_stats()
+        mm = "🚧 *ATIVO*" if is_maintenance_mode() else "✅ *Inativo*"
         msg = (
             f"📊 *Status do ApexGuardian*\n\n"
+            f"Manutenção: {mm}\n"
             f"Total de erros: {stats['total']}\n"
             f"Ativos: {stats['active']}\n"
             f"Em preview: {stats['preview']}\n"

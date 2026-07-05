@@ -55,7 +55,21 @@
             <form method="POST" action="/admin/system/force-volume">
                 <button type="submit" class="btn btn-primary">📊 Forçar Verificação de Volume</button>
             </form>
+            {% if admin.role == 'supreme' %}
+            <form method="POST" action="/admin/system/maintenance-toggle">
+                <button type="submit" class="btn {{ 'btn-success' if not maintenance_mode else 'btn-warning' }}">
+                    {{ '🔒 Ativar Manutenção' if not maintenance_mode else '🔓 Desativar Manutenção' }}
+                </button>
+            </form>
+            {% endif %}
         </div>
+        {% if maintenance_mode %}
+        <div class="mt-4 p-3 bg-yellow-900/50 border border-yellow-700 rounded-lg text-yellow-300 text-sm">
+            🚧 O <strong>controle de erros do ApexEnem</strong> está pausado.
+            Investigações de novos erros não serão iniciadas.
+            Lembrete enviado ao Telegram a cada 30min.
+        </div>
+        {% endif %}
     </div>
 
     <div class="card">

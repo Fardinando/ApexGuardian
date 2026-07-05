@@ -9,10 +9,11 @@
 5. [Conseguir Token da Vercel](#5-conseguir-token-da-vercel)
 6. [Conseguir Token do GitHub](#6-conseguir-token-do-github)
 7. [Conseguir Chave da Groq (fallback)](#7-conseguir-chave-da-groq-fallback)
-8. [Deploy do ApexGuardian no Render](#8-deploy-do-apexguardian-no-render)
-9. [Configurar Webhook do Telegram](#9-configurar-webhook-do-telegram)
-10. [Verificar se Tudo Funcionou](#10-verificar-se-tudo-funcionou)
-11. [Manutenção](#11-manutenção)
+8. [Criar Banco no Turso](#8-criar-banco-no-turso-banco-persistente-9gb-gratuito)
+9. [Deploy do ApexGuardian no Render](#9-deploy-do-apexguardian-no-render)
+10. [Configurar Webhook do Telegram](#10-configurar-webhook-do-telegram)
+11. [Verificar se Tudo Funcionou](#11-verificar-se-tudo-funcionou)
+12. [Manutenção](#12-manutenção)
 
 ---
 
@@ -224,15 +225,67 @@ Id: 123456789
 
 ---
 
-## 8. Deploy do ApexGuardian no Render
+## 8. Criar Banco no Turso (banco persistente 9GB gratuito)
 
-### 8.1 Criar conta no Render
+O Render free tier tem **sistema de arquivos efêmero** — dados são perdidos a cada deploy.
+O Turso resolve isso com 9GB gratuitos na nuvem.
+
+### 8.1 Criar conta no Turso
+
+1. Acesse [turso.tech](https://turso.tech)
+2. Clique em **Sign up** com GitHub
+
+### 8.2 Instalar o CLI do Turso
+
+```bash
+# Windows (PowerShell como administrador):
+winget install turso
+
+# macOS:
+curl -sSfL https://get.turso.dev | bash
+
+# Linux:
+curl -sSfL https://get.turso.dev | bash
+```
+
+### 8.3 Login e criar banco
+
+```bash
+# Logar com sua conta GitHub
+turso auth login
+
+# Criar o banco (escolha a região mais próxima)
+turso db create apexguardian
+
+# Ver o banco criado
+turso db list
+```
+
+### 8.4 Pegar URL e Token
+
+```bash
+# Buscar URL do banco
+turso db show apexguardian
+# Copie o campo "Url" (algo como libsql://apexguardian-<seu-username>.turso.io)
+
+# Gerar token de acesso
+turso db tokens create apexguardian
+# Copie o token gerado
+```
+
+Guarde esses dois valores — você vai colocá-los nas variáveis de ambiente do Render.
+
+---
+
+## 9. Deploy do ApexGuardian no Render
+
+### 9.1 Criar conta no Render
 
 1. Acesse [dashboard.render.com](https://dashboard.render.com)
 2. Clique em **Sign Up** > **GitHub**
 3. Autorize o acesso ao repositório `Fardinando/ApexGuardian`
 
-### 8.2 Criar Web Service
+### 9.2 Criar Web Service
 
 1. No dashboard, clique em **New** > **Web Service**
 2. Escolha o repositório `Fardinando/ApexGuardian`
@@ -248,7 +301,7 @@ Id: 123456789
 | **Start Command** | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
 | **Plan** | **Free** |
 
-### 8.3 Adicionar Variáveis de Ambiente
+### 9.3 Adicionar Variáveis de Ambiente
 
 Role até **Environment Variables** e adicione cada uma:
 
@@ -268,6 +321,8 @@ Role até **Environment Variables** e adicione cada uma:
 | `AI_MODEL` | Modelo de fallback | `llama3-8b-8192` |
 | `ADMIN_USER` | Login do admin | `supreme` |
 | `ADMIN_PASS` | **SENHA FORTE** (mínimo 12 caracteres) | `UmaSenhaBemForte123!` |
+| `TURSO_DB_URL` | URL do banco Turso | `libsql://apexguardian-<user>.turso.io` |
+| `TURSO_AUTH_TOKEN` | Token de acesso do Turso | `eyJ...` |
 | `SESSION_SECRET` | 64 caracteres aleatórios | `a1b2c3d4e5f6...` (64 chars) |
 
 > **Dica para SESSION_SECRET:** Gere uma string aleatória no terminal:
@@ -278,14 +333,14 @@ Role até **Environment Variables** e adicione cada uma:
 > -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | % {[char]$_})
 > ```
 
-### 8.4 Finalizar
+### 9.4 Finalizar
 
 1. Clique em **Create Web Service**
 2. O Render vai fazer o build automaticamente (leva 2-3 minutos)
 3. Acompanhe os logs na aba **Logs**
 4. ✅ Quando terminar, o Render mostra: `Your service is live 🎉`
 
-### 8.5 Descobrir a URL do seu app
+### 9.5 Descobrir a URL do seu app
 
 A URL será:
 ```
@@ -294,7 +349,7 @@ https://apexguardian.onrender.com
 
 ---
 
-## 9. Configurar Webhook do Telegram
+## 10. Configurar Webhook do Telegram
 
 O Telegram precisa saber para onde enviar as mensagens dos usuários.
 
@@ -331,7 +386,7 @@ Deve mostrar:
 
 ---
 
-## 10. Verificar se Tudo Funcionou
+## 11. Verificar se Tudo Funcionou
 
 ### 10.1 Testar o Health Check
 
@@ -371,7 +426,7 @@ Se tudo estiver funcionando, você receberá uma notificação no Telegram nos p
 
 ---
 
-## 11. Manutenção
+## 12. Manutenção
 
 ### Ver logs do Render
 
@@ -402,6 +457,25 @@ ollama pull llama3.2  # modelo mais novo (3B)
 
 E no .env do Render, atualize `OLLAMA_MODEL=llama3.2`
 
+### Consultar dados no Turso
+
+```bash
+turso db shell apexguardian
+```
+
+Dentro do shell SQL, você pode rodar queries como:
+```sql
+.tables
+SELECT * FROM error_signatures ORDER BY created_at DESC LIMIT 5;
+SELECT COUNT(*) FROM user_reports;
+```
+
+### Se o Turso der problema
+
+1. Verifique se o banco existe: `turso db list`
+2. Verifique se o token é válido: `turso db tokens create apexguardian` (gera novo)
+3. Atualize `TURSO_AUTH_TOKEN` no Render se trocou o token
+
 ### Se o Ollama parar de responder
 
 1. Verifique se o HF Space está **Running** (não dormindo)
@@ -420,6 +494,7 @@ E no .env do Render, atualize `OLLAMA_MODEL=llama3.2`
 - [ ] Token Vercel + Project ID salvos
 - [ ] Token GitHub salvo
 - [ ] Chave Groq salva
+- [ ] Conta Turso criada + URL e token salvos
 - [ ] Render Web Service criado
 - [ ] Variáveis de ambiente configuradas
 - [ ] Webhook do Telegram configurado

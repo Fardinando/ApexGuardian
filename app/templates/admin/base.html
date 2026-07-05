@@ -32,96 +32,98 @@
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
-    <div class="flex min-h-screen">
-        {% if admin %}
-        <aside class="w-64 bg-gray-800 border-r border-gray-700 p-4 flex flex-col">
-            <div class="flex items-center gap-3 mb-8 px-2">
-                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-lg font-bold">AG</div>
-                <div>
-                    <div class="font-bold text-sm">ApexGuardian</div>
-                    <div class="text-xs text-gray-400">v1.0.0</div>
+    {% if admin %}
+    <aside class="fixed top-0 left-0 w-64 h-screen bg-gray-800 border-r border-gray-700 p-4 flex flex-col z-50">
+        <div class="flex items-center gap-3 mb-8 px-2">
+            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-lg font-bold">AG</div>
+            <div>
+                <div class="font-bold text-sm">ApexGuardian</div>
+                <div class="text-xs text-gray-400">v1.0.0</div>
+            </div>
+        </div>
+
+        <nav class="flex-1 space-y-1 overflow-y-auto">
+            <a href="/admin" class="sidebar-link {% if request.url.path == '/admin' %}active{% endif %}">
+                <span>📊</span> Dashboard
+            </a>
+            <a href="/admin/errors" class="sidebar-link {% if '/errors' in request.url.path %}active{% endif %}">
+                <span>🔍</span> Todos Erros
+            </a>
+            <a href="/admin/errors/active" class="sidebar-link">
+                <span>🟡</span> Ativos
+            </a>
+            <a href="/admin/errors/preview" class="sidebar-link">
+                <span>🟣</span> Em Preview
+            </a>
+            <a href="/admin/errors/resolved" class="sidebar-link">
+                <span>✅</span> Resolvidos
+            </a>
+            <div class="border-t border-gray-700 my-2"></div>
+            <a href="/admin/errors/fully-archived" class="sidebar-link">
+                <span>📦</span> Arquivados Completos
+            </a>
+            <a href="/admin/errors/partially-archived" class="sidebar-link">
+                <span>📦</span> Arquivados Parciais
+            </a>
+            <a href="/admin/errors/cooldown" class="sidebar-link">
+                <span>🔴</span> Em Cooldown
+            </a>
+            <a href="/admin/errors/ignored" class="sidebar-link">
+                <span>⏭️</span> Ignorados
+            </a>
+            {% if admin.role in ('supreme', 'analyst') %}
+            <div class="border-t border-gray-700 my-2"></div>
+            <a href="/admin/errors/add" class="sidebar-link">
+                <span>➕</span> Adicionar Erro
+            </a>
+            {% endif %}
+            {% if admin.role in ('supreme', 'operator', 'analyst') %}
+            <a href="/admin/users" class="sidebar-link">
+                <span>👥</span> Usuários
+            </a>
+            {% endif %}
+            {% if admin.role == 'supreme' or admin.role == 'analyst' %}
+            <a href="/admin/activity" class="sidebar-link">
+                <span>📋</span> Atividade
+            </a>
+            {% endif %}
+            {% if admin.role in ('supreme', 'operator', 'analyst') %}
+            <a href="/admin/system" class="sidebar-link">
+                <span>⚙️</span> Sistema
+            </a>
+            {% endif %}
+            {% if admin.role == 'supreme' %}
+            <div class="border-t border-gray-700 my-2"></div>
+            <a href="/admin/admins" class="sidebar-link">
+                <span>👤</span> Admins
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="border-t border-gray-700 pt-4 mt-4">
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-sm font-bold">
+                    {{ admin.username[:2].upper() }}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">{{ admin.username }}</div>
+                    <div class="text-xs text-gray-400">{{ admin.role }}</div>
+                </div>
+                <div class="flex gap-1">
+                    <a href="/admin/password" class="text-gray-400 hover:text-white text-sm" title="Trocar senha">🔑</a>
+                    <a href="/admin/logout" class="text-gray-400 hover:text-white text-sm" title="Sair">🚪</a>
                 </div>
             </div>
+        </div>
+    </aside>
 
-            <nav class="flex-1 space-y-1">
-                <a href="/admin" class="sidebar-link {% if request.url.path == '/admin' %}active{% endif %}">
-                    <span>📊</span> Dashboard
-                </a>
-                <a href="/admin/errors" class="sidebar-link {% if '/errors' in request.url.path %}active{% endif %}">
-                    <span>🔍</span> Todos Erros
-                </a>
-                <a href="/admin/errors/active" class="sidebar-link">
-                    <span>🟡</span> Ativos
-                </a>
-                <a href="/admin/errors/preview" class="sidebar-link">
-                    <span>🟣</span> Em Preview
-                </a>
-                <a href="/admin/errors/resolved" class="sidebar-link">
-                    <span>✅</span> Resolvidos
-                </a>
-                <div class="border-t border-gray-700 my-2"></div>
-                <a href="/admin/errors/fully-archived" class="sidebar-link">
-                    <span>📦</span> Arquivados Completos
-                </a>
-                <a href="/admin/errors/partially-archived" class="sidebar-link">
-                    <span>📦</span> Arquivados Parciais
-                </a>
-                <a href="/admin/errors/cooldown" class="sidebar-link">
-                    <span>🔴</span> Em Cooldown
-                </a>
-                <a href="/admin/errors/ignored" class="sidebar-link">
-                    <span>⏭️</span> Ignorados
-                </a>
-                {% if admin.role in ('supreme', 'analyst') %}
-                <div class="border-t border-gray-700 my-2"></div>
-                <a href="/admin/errors/add" class="sidebar-link">
-                    <span>➕</span> Adicionar Erro
-                </a>
-                {% endif %}
-                {% if admin.role in ('supreme', 'operator', 'analyst') %}
-                <a href="/admin/users" class="sidebar-link">
-                    <span>👥</span> Usuários
-                </a>
-                {% endif %}
-                {% if admin.role == 'supreme' or admin.role == 'analyst' %}
-                <a href="/admin/activity" class="sidebar-link">
-                    <span>📋</span> Atividade
-                </a>
-                {% endif %}
-                {% if admin.role in ('supreme', 'operator', 'analyst') %}
-                <a href="/admin/system" class="sidebar-link">
-                    <span>⚙️</span> Sistema
-                </a>
-                {% endif %}
-                {% if admin.role == 'supreme' %}
-                <div class="border-t border-gray-700 my-2"></div>
-                <a href="/admin/admins" class="sidebar-link">
-                    <span>👤</span> Admins
-                </a>
-                {% endif %}
-            </nav>
-
-            <div class="border-t border-gray-700 pt-4 mt-4">
-                <div class="flex items-center gap-3 px-2">
-                    <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-sm font-bold">
-                        {{ admin.username[:2].upper() }}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-sm font-medium truncate">{{ admin.username }}</div>
-                        <div class="text-xs text-gray-400">{{ admin.role }}</div>
-                    </div>
-                    <div class="flex gap-1">
-                        <a href="/admin/password" class="text-gray-400 hover:text-white text-sm" title="Trocar senha">🔑</a>
-                        <a href="/admin/logout" class="text-gray-400 hover:text-white text-sm" title="Sair">🚪</a>
-                    </div>
-                </div>
-            </div>
-        </aside>
-        {% endif %}
-
-        <main class="flex-1 p-6 overflow-y-auto">
-            {% block content %}{% endblock %}
-        </main>
+    <main class="ml-64 p-6 min-h-screen">
+        {% block content %}{% endblock %}
+    </main>
+    {% else %}
+    <div class="min-h-screen">
+        {% block content %}{% endblock %}
     </div>
+    {% endif %}
 </body>
 </html>

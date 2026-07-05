@@ -1,4 +1,3 @@
-import sqlite3
 import hashlib
 import json
 from datetime import datetime, timedelta
@@ -13,12 +12,99 @@ def get_db_path() -> Path:
     return settings.database_full_path
 
 
-def get_connection() -> sqlite3.Connection:
+def get_connection():
+    if settings.use_turso:
+        import libsql
+        conn = libsql.connect(settings.turso_db_url, auth_token=settings.turso_auth_token)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        return _TursoConnection(conn)
+    import sqlite3
     conn = sqlite3.connect(str(get_db_path()))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
+
+class _TursoRow:
+    __slots__ = ("_cols", "_vals", "_map")
+
+    def __init__(self, cols, vals):
+        self._cols = cols
+        self._vals = vals
+        self._map = dict(zip(cols, vals))
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._vals[key]
+        return self._map[key]
+
+    def __iter__(self):
+        return iter(self._vals)
+
+    def keys(self):
+        return self._cols
+
+    def values(self):
+        return self._vals
+
+    def items(self):
+        return self._map.items()
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except (KeyError, IndexError):
+            return default
+
+    def __repr__(self):
+        return f"<Row {dict(self._map)}>"
+
+
+class _TursoCursor:
+    def __init__(self, raw_cursor):
+        self._cur = raw_cursor
+        self.lastrowid = getattr(raw_cursor, "lastrowid", None)
+
+    @property
+    def description(self):
+        return self._cur.description
+
+    def fetchone(self):
+        row = self._cur.fetchone()
+        if row is None or not self.description:
+            return None
+        cols = [d[0] for d in self.description]
+        return _TursoRow(cols, row)
+
+    def fetchall(self):
+        if not self.description:
+            return []
+        cols = [d[0] for d in self.description]
+        return [_TursoRow(cols, r) for r in self._cur.fetchall()]
+
+
+class _TursoConnection:
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, sql, params=None):
+        raw = self._conn.execute(sql, params or ())
+        return _TursoCursor(raw)
+
+    def executescript(self, script):
+        for stmt in (s.strip() for s in script.split(";") if s.strip()):
+            self._conn.execute(stmt)
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        self._conn.close()
 
 
 @contextmanager
@@ -125,6 +211,12 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_fix_error ON fix_attempts(error_sig_id);
             CREATE INDEX IF NOT EXISTS idx_activity_admin ON admin_activity_log(admin_id);
             CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON admin_activity_log(timestamp);
+
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            INSERT OR IGNORE INTO settings (key, value) VALUES ('maintenance_mode', '0');
         """)
 
 
@@ -528,18 +620,14 @@ def delete_error_complete(error_id: int):
 def set_maintenance_mode(active: bool):
     with db() as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO error_signatures (hash, stack_trace, origin, status, "
-            "total_reports, unique_users, first_seen, last_seen, created_at, updated_at) "
-            "VALUES ('__maintenance__', ?, '__system__', ?, 0, 0, ?, ?, ?, ?)",
-            ("maintenance" if active else "inactive",
-             "maintenance" if active else "active",
-             now_iso(), now_iso(), now_iso(), now_iso())
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('maintenance_mode', ?)",
+            ("1" if active else "0",)
         )
 
 
 def is_maintenance_mode() -> bool:
     with db() as conn:
         row = conn.execute(
-            "SELECT status FROM error_signatures WHERE hash = '__maintenance__'"
+            "SELECT value FROM settings WHERE key = 'maintenance_mode'"
         ).fetchone()
-        return row is not None and row["status"] == "maintenance"
+        return row is not None and row[0] == "1"
