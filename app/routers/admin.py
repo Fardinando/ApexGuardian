@@ -8,7 +8,7 @@ import asyncio
 from app.database import (
     get_errors_paginated, get_error_by_id, get_reports_for_error,
     get_fix_attempts_for_error, get_dashboard_stats, get_errors_by_day,
-    get_top_errors, get_recent_activity, get_admin_list, get_admin_by_id,
+    get_top_errors, get_recent_activity, get_admin_list,
     create_admin, update_admin_role, update_admin_password,
     toggle_admin_active, get_activity_log, get_user_stats,
     delete_error_complete, update_error_status, verify_admin_login,
@@ -415,33 +415,25 @@ async def admin_unban(request: Request, admin_id: int):
     return RedirectResponse("/admin/admins", status_code=302)
 
 
-@router.get("/admins/{admin_id}/password", response_class=HTMLResponse)
-@require_permission("add_admin")
-async def admin_password_page(request: Request, admin_id: int):
-    target = get_admin_by_id(admin_id)
-    if not target:
-        raise HTTPException(status_code=404)
-    if target["role"] == "supreme":
-        raise HTTPException(status_code=403, detail="Não é permitido alterar senha do admin supreme")
+@router.get("/password", response_class=HTMLResponse)
+async def admin_password_page(request: Request):
     admin_info = get_current_admin(request)
+    if not admin_info:
+        return RedirectResponse("/admin/login", status_code=302)
     return templates.TemplateResponse("admin_password.html", {
         **{"request": request, "admin": admin_info},
-        "target": target,
     })
 
 
-@router.post("/admins/{admin_id}/password")
-@require_permission("add_admin")
-async def admin_password_action(request: Request, admin_id: int, password: str = Form(...)):
-    target = get_admin_by_id(admin_id)
-    if not target:
-        raise HTTPException(status_code=404)
-    if target["role"] == "supreme":
-        raise HTTPException(status_code=403, detail="Não é permitido alterar senha do admin supreme")
+@router.post("/password")
+async def admin_password_action(request: Request, password: str = Form(...)):
+    admin_info = get_current_admin(request)
+    if not admin_info:
+        return RedirectResponse("/admin/login", status_code=302)
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-    update_admin_password(admin_id, pw_hash)
-    await log_action(request, "change_password", "admin", str(admin_id))
-    return RedirectResponse("/admin/admins", status_code=302)
+    update_admin_password(admin_info["id"], pw_hash)
+    await log_action(request, "change_password", "admin", str(admin_info["id"]))
+    return RedirectResponse("/admin", status_code=302)
 
 
 @router.get("/activity", response_class=HTMLResponse)

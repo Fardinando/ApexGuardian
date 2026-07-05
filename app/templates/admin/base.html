@@ -18,9 +18,9 @@
         .badge-cooldown { @apply bg-red-100 text-red-800; }
         .badge-give_up { @apply bg-red-200 text-red-900; }
         .badge-ignored { @apply bg-gray-200 text-gray-500; }
-        .sidebar-link { @apply flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full; }
-        .sidebar-link:hover { @apply bg-gray-700/50 text-white; }
-        .sidebar-link.active { @apply bg-blue-600 text-white; }
+        .sidebar-link { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.75rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; transition: all 0.15s; }
+        .sidebar-link:hover { background-color: rgba(55, 65, 81, 0.5); color: white; }
+        .sidebar-link.active { background-color: #2563eb; color: white; }
         .card { @apply bg-gray-800 rounded-xl border border-gray-700 p-6; }
         .btn { @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
         .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
@@ -110,7 +110,10 @@
                         <div class="text-sm font-medium truncate">{{ admin.username }}</div>
                         <div class="text-xs text-gray-400">{{ admin.role }}</div>
                     </div>
-                    <a href="/admin/logout" class="text-gray-400 hover:text-white text-sm" title="Sair">🚪</a>
+                    <div class="flex gap-1">
+                        <a href="/admin/password" class="text-gray-400 hover:text-white text-sm" title="Trocar senha">🔑</a>
+                        <a href="/admin/logout" class="text-gray-400 hover:text-white text-sm" title="Sair">🚪</a>
+                    </div>
                 </div>
             </div>
         </aside>
