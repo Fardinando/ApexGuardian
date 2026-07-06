@@ -580,6 +580,11 @@ def update_admin_role(admin_id: int, new_role: str):
         conn.execute("UPDATE admin_users SET role = ? WHERE id = ?", (new_role, admin_id))
 
 
+def rename_admin(admin_id: int, new_username: str):
+    with db() as conn:
+        conn.execute("UPDATE admin_users SET username = ? WHERE id = ?", (new_username, admin_id))
+
+
 def update_admin_password(admin_id: int, password_hash: str):
     with db() as conn:
         conn.execute("UPDATE admin_users SET password_hash = ? WHERE id = ?", (password_hash, admin_id))

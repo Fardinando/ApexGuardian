@@ -9,7 +9,7 @@ from app.database import (
     get_errors_paginated, get_error_by_id, get_reports_for_error,
     get_fix_attempts_for_error, get_dashboard_stats, get_errors_by_day,
     get_top_errors, get_recent_activity, get_admin_list,
-    create_admin, update_admin_role, update_admin_password,
+    create_admin, update_admin_role, update_admin_password, rename_admin,
     toggle_admin_active, get_activity_log, get_user_stats,
     delete_error_complete, update_error_status, verify_admin_login,
     create_session, validate_session, delete_session, log_admin_activity,
@@ -437,6 +437,15 @@ async def admin_ban(request: Request, admin_id: int):
 async def admin_unban(request: Request, admin_id: int):
     toggle_admin_active(admin_id, True)
     await log_action(request, "reactivate_admin", "admin", str(admin_id))
+    return RedirectResponse("/admin/admins", status_code=302)
+
+
+@router.post("/admins/{admin_id}/rename")
+@require_permission("change_admin_role")
+async def admin_rename(request: Request, admin_id: int, username: str = Form(...)):
+    rename_admin(admin_id, username)
+    await log_action(request, "rename_admin", "admin", str(admin_id),
+                     {"new_username": username})
     return RedirectResponse("/admin/admins", status_code=302)
 
 

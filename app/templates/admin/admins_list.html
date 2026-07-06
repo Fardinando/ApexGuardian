@@ -22,7 +22,18 @@
             <tbody>
                 {% for a in admins %}
                 <tr class="border-t border-gray-700">
-                    <td class="px-4 py-3 font-medium">{{ a.username }}</td>
+                    <td class="px-4 py-3 font-medium">
+                        <span class="inline-flex items-center gap-1">
+                            <span class="username-text">{{ a.username }}</span>
+                            <button onclick="this.previousElementSibling.style.display='none';this.nextElementSibling.style.display='inline-flex';this.style.display='none'" class="text-xs text-gray-500 hover:text-white ml-1">✏️</button>
+                            <form method="POST" action="/admin/admins/{{ a.id }}/rename" class="inline-flex gap-1" style="display:none">
+                                <input type="text" name="username" value="{{ a.username }}" required minlength="3"
+                                       class="bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs w-28">
+                                <button type="submit" class="text-green-400 text-xs">💾</button>
+                                <button type="button" onclick="this.closest('form').style.display='none';this.closest('td').querySelector('.username-text').style.display='inline';this.closest('td').querySelector('button:first-of-type').style.display='inline'" class="text-gray-500 text-xs">✕</button>
+                            </form>
+                        </span>
+                    </td>
                     <td class="px-4 py-3">
                         <span class="badge {% if a.role in ('supreme', 'sub_supreme') %}bg-purple-900 text-purple-300{% elif a.role == 'alto_adm' %}bg-indigo-900 text-indigo-300{% elif a.role == 'operator' %}bg-blue-900 text-blue-300{% elif a.role == 'analyst' %}bg-green-900 text-green-300{% else %}bg-gray-700 text-gray-300{% endif %}">
                             {{ a.role|role_label(admin.role) }}
