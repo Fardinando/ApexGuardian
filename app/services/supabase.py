@@ -1,13 +1,19 @@
+import httpx
 from typing import Any
 from app.config import settings
 
 
-def get_supabase_client():
-    try:
-        from supabase import create_client
-        return create_client(settings.supabase_url, settings.supabase_key)
-    except Exception:
-        return None
+def _headers() -> dict[str, str]:
+    return {
+        "apikey": settings.supabase_key,
+        "Authorization": f"Bearer {settings.supabase_key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+
+def _base_url() -> str:
+    return f"{settings.supabase_url.rstrip('/')}/rest/v1"
 
 
 def supabase_available() -> bool:
@@ -18,15 +24,18 @@ def supabase_query(table: str, select: str = "*", eq: tuple | None = None,
                    limit: int = 100) -> list[dict[str, Any]]:
     if not supabase_available():
         return []
-    client = get_supabase_client()
-    if not client:
-        return []
     try:
-        query = client.table(table).select(select)
+        params = {"select": select, "limit": limit}
         if eq:
-            query = query.eq(eq[0], eq[1])
-        data = query.limit(limit).execute()
-        return data.data if hasattr(data, 'data') else []
+            params[f"{eq[0]}"] = f"eq.{eq[1]}"
+        resp = httpx.get(
+            f"{_base_url()}/{table}",
+            headers=_headers(),
+            params=params,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return resp.json()
     except Exception:
         return []
 
@@ -34,11 +43,14 @@ def supabase_query(table: str, select: str = "*", eq: tuple | None = None,
 def supabase_update(table: str, values: dict, eq: tuple) -> bool:
     if not supabase_available():
         return False
-    client = get_supabase_client()
-    if not client:
-        return False
     try:
-        client.table(table).update(values).eq(eq[0], eq[1]).execute()
+        resp = httpx.patch(
+            f"{_base_url()}/{table}?{eq[0]}=eq.{eq[1]}",
+            headers=_headers(),
+            json=values,
+            timeout=15,
+        )
+        resp.raise_for_status()
         return True
     except Exception:
         return False
@@ -47,11 +59,14 @@ def supabase_update(table: str, values: dict, eq: tuple) -> bool:
 def supabase_insert(table: str, values: dict) -> bool:
     if not supabase_available():
         return False
-    client = get_supabase_client()
-    if not client:
-        return False
     try:
-        client.table(table).insert(values).execute()
+        resp = httpx.post(
+            f"{_base_url()}/{table}",
+            headers=_headers(),
+            json=values,
+            timeout=15,
+        )
+        resp.raise_for_status()
         return True
     except Exception:
         return False
@@ -60,11 +75,13 @@ def supabase_insert(table: str, values: dict) -> bool:
 def supabase_delete(table: str, eq: tuple) -> bool:
     if not supabase_available():
         return False
-    client = get_supabase_client()
-    if not client:
-        return False
     try:
-        client.table(table).delete().eq(eq[0], eq[1]).execute()
+        resp = httpx.delete(
+            f"{_base_url()}/{table}?{eq[0]}=eq.{eq[1]}",
+            headers=_headers(),
+            timeout=15,
+        )
+        resp.raise_for_status()
         return True
     except Exception:
         return False
