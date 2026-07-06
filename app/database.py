@@ -285,7 +285,9 @@ def verify_admin_login(username: str, password: str) -> Optional[dict]:
             "SELECT id, username, password_hash, role, is_active FROM admin_users WHERE username = ?",
             (username,)
         ).fetchone()
-        if row and row["is_active"]:
+        if row:
+            if not row["is_active"]:
+                return {"banned": True}
             if bcrypt.checkpw(password.encode(), row["password_hash"].encode()):
                 conn.execute("UPDATE admin_users SET last_login = ? WHERE id = ?",
                              (now_iso(), row["id"]))

@@ -63,6 +63,11 @@ async def login_action(request: Request, username: str = Form(...), password: st
             **{"request": request, "admin": None},
             "error": "Credenciais inválidas",
         })
+    if isinstance(admin, dict) and admin.get("banned"):
+        return templates.TemplateResponse("login.html", {
+            **{"request": request, "admin": None},
+            "error": "Você não tem acesso a esta página. Acha que é um erro? Fale com o dono.",
+        })
 
     token = create_session(admin["id"])
     log_admin_activity(admin["id"], "login", "system", None, {"username": username},
