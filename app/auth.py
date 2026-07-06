@@ -69,6 +69,7 @@ PERMISSIONS = {
         "view_stacktraces": True,
         "view_user_stats": True,
         "view_admin_activity": True,
+        "add_error_detection": True,
         "check_integrations": True,
     },
     "operator": {

@@ -588,16 +588,30 @@ def toggle_admin_active(admin_id: int, active: bool):
         conn.execute("UPDATE admin_users SET is_active = ? WHERE id = ?", (1 if active else 0, admin_id))
 
 
-def get_activity_log(page: int = 1, per_page: int = 50) -> tuple[list[dict], int]:
+def get_activity_log(page: int = 1, per_page: int = 50, action: str = None) -> tuple[list[dict], int]:
     with db() as conn:
-        total = conn.execute("SELECT COUNT(*) FROM admin_activity_log").fetchone()[0]
-        offset = (page - 1) * per_page
-        rows = conn.execute(
-            """SELECT a.*, u.username as admin_name
-               FROM admin_activity_log a LEFT JOIN admin_users u ON a.admin_id = u.id
-               ORDER BY a.timestamp DESC LIMIT ? OFFSET ?""",
-            (per_page, offset)
-        ).fetchall()
+        if action:
+            total = conn.execute(
+                "SELECT COUNT(*) FROM admin_activity_log WHERE action LIKE ?",
+                (f"%{action}%",)
+            ).fetchone()[0]
+            offset = (page - 1) * per_page
+            rows = conn.execute(
+                """SELECT a.*, u.username as admin_name
+                   FROM admin_activity_log a LEFT JOIN admin_users u ON a.admin_id = u.id
+                   WHERE a.action LIKE ?
+                   ORDER BY a.timestamp DESC LIMIT ? OFFSET ?""",
+                (f"%{action}%", per_page, offset)
+            ).fetchall()
+        else:
+            total = conn.execute("SELECT COUNT(*) FROM admin_activity_log").fetchone()[0]
+            offset = (page - 1) * per_page
+            rows = conn.execute(
+                """SELECT a.*, u.username as admin_name
+                   FROM admin_activity_log a LEFT JOIN admin_users u ON a.admin_id = u.id
+                   ORDER BY a.timestamp DESC LIMIT ? OFFSET ?""",
+                (per_page, offset)
+            ).fetchall()
         return [dict(r) for r in rows], total
 
 

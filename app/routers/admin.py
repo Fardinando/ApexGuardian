@@ -450,6 +450,8 @@ async def admin_password_action(request: Request, password: str = Form(...)):
     admin_info = get_current_admin(request)
     if not admin_info:
         return RedirectResponse("/admin/login", status_code=302)
+    if admin_info["role"] == "supreme":
+        raise HTTPException(status_code=403, detail="ADM Supreme não pode trocar a própria senha pelo painel")
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     update_admin_password(admin_info["id"], pw_hash)
     await log_action(request, "change_password", "admin", str(admin_info["id"]))
@@ -458,8 +460,8 @@ async def admin_password_action(request: Request, password: str = Form(...)):
 
 @router.get("/activity", response_class=HTMLResponse)
 @require_permission("view_admin_activity")
-async def activity_log_page(request: Request, page: int = 1):
-    activities, total = get_activity_log(page=page)
+async def activity_log_page(request: Request, page: int = 1, action: str = None):
+    activities, total = get_activity_log(page=page, action=action)
     total_pages = max(1, (total + 49) // 50)
     admin_info = get_current_admin(request)
     return templates.TemplateResponse("activity_log.html", {
@@ -467,6 +469,7 @@ async def activity_log_page(request: Request, page: int = 1):
         "activities": activities,
         "page": page,
         "total_pages": total_pages,
+        "filter_action": action,
     })
 
 
