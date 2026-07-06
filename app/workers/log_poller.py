@@ -8,6 +8,7 @@ from app.database import (
 )
 from app.services.vercel_logs import fetch_recent_deployments, fetch_deployment_logs
 from app.services.pipeline import run_investigation_pipeline
+from app.routers.reports import ask_to_investigate
 
 logger = logging.getLogger("apexguardian.log_poller")
 
@@ -41,7 +42,12 @@ async def poll_logs_loop(interval_seconds: int = 180):
 
                 logs = await fetch_deployment_logs(dep_id, limit=50)
                 for log in logs:
-                    if log.get("type") != "error" and log.get("level") != "error":
+                    log_type = (log.get("type") or "").lower()
+                    log_level = (log.get("level") or "").lower()
+                    is_error = log_type == "error" or log_level == "error"
+                    is_warning = log_type == "warning" or log_level == "warning" or log_type == "warn" or log_level == "warn"
+
+                    if not is_error and not is_warning:
                         continue
 
                     log_text = log.get("text") or log.get("message", "")
@@ -53,18 +59,23 @@ async def poll_logs_loop(interval_seconds: int = 180):
                     if existing:
                         continue
 
+                    origin = "vercel_warning" if is_warning else "vercel_log"
                     error_id = upsert_error_signature(
                         hash_val=hash_val,
                         stack_trace=log_text,
-                        description=f"Log detectado: {log_text[:200]}",
-                        origin="vercel_log",
+                        description=f"{'Warning' if is_warning else 'Log'} detectado: {log_text[:200]}",
+                        origin=origin,
                     )
 
                     log_ts = log.get("created") or log.get("timestamp") or now_iso()
                     add_log_event(error_id, dep_id, json.dumps(log), str(log_ts))
 
-                    logger.info("Novo erro detectado via log polling: %s", hash_val)
-                    asyncio.create_task(run_investigation_pipeline(error_id))
+                    if is_warning:
+                        logger.info("Warning detectado via log polling: %s", hash_val)
+                        asyncio.create_task(ask_to_investigate(error_id, log_text[:300]))
+                    else:
+                        logger.info("Erro detectado via log polling: %s", hash_val)
+                        asyncio.create_task(run_investigation_pipeline(error_id))
 
             _last_poll_time = current_time
 

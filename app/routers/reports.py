@@ -67,8 +67,7 @@ async def receive_report(payload: ReportIn):
     if matched_log and not is_maintenance_mode():
         error_id = error_sig_id
         update_error_status(error_id, "new")
-        _pending_investigations[error_id] = hash_val
-        asyncio.create_task(_ask_to_investigate(error_id, payload.description))
+        asyncio.create_task(ask_to_investigate(error_id, payload.description, hash_val))
 
     return {
         "status": "received",
@@ -78,7 +77,12 @@ async def receive_report(payload: ReportIn):
     }
 
 
-async def _ask_to_investigate(error_id: int, description: str):
+async def ask_to_investigate(error_id: int, description: str, hash_val: str = ""):
+    if not hash_val:
+        from app.database import get_error_by_id
+        err = get_error_by_id(error_id)
+        hash_val = err["hash"] if err else str(error_id)
+    _pending_investigations[error_id] = hash_val
     await asyncio.sleep(2)
     msg = (
         f"⚠️ *Alerta de Erro — ERROR_ID:{error_id}*\n\n"
