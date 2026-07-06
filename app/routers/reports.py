@@ -77,18 +77,27 @@ async def receive_report(payload: ReportIn):
     }
 
 
-async def ask_to_investigate(error_id: int, description: str, hash_val: str = ""):
+async def ask_to_investigate(error_id: int, description: str, hash_val: str = "",
+                              stack_trace: str = ""):
     if not hash_val:
         from app.database import get_error_by_id
         err = get_error_by_id(error_id)
         hash_val = err["hash"] if err else str(error_id)
+    await asyncio.sleep(1)
+
+    from app.services.ai_client import diagnose_error
+    from app.services.search import search_error
+    query = f"{stack_trace[:300] or description[:200]} Next.js React Vercel"
+    search_results = await search_error(query)
+    diagnosis = await diagnose_error(stack_trace or "", description, search_results)
+    explanation = diagnosis or "Não foi possível analisar automaticamente."
+
     _pending_investigations[error_id] = hash_val
-    await asyncio.sleep(2)
     msg = (
-        f"⚠️ *Alerta de Erro — ERROR_ID:{error_id}*\n\n"
+        f"⚠️ *Alerta de Warning — ERROR_ID:{error_id}*\n\n"
         f"`{description[:300]}`\n\n"
-        f"Deseja que eu investigue este erro?\n\n"
-        f"Responda com:\n"
+        f"🧠 *Explicação:*\n{explanation[:1500]}\n\n"
+        f"Deseja que eu investigue?\n\n"
         f"✅ \"Sim\" / \"Investigar\" → Iniciar investigação\n"
         f"❌ \"Não\" / \"Ignorar\" → Arquivar sem investigar"
     )

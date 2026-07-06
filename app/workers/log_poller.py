@@ -72,7 +72,7 @@ async def poll_logs_loop(interval_seconds: int = 180):
 
                     if is_warning:
                         logger.info("Warning detectado via log polling: %s", hash_val)
-                        asyncio.create_task(ask_to_investigate(error_id, log_text[:300]))
+                        asyncio.create_task(ask_to_investigate(error_id, log_text[:300], stack_trace=log_text))
                     else:
                         logger.info("Erro detectado via log polling: %s", hash_val)
                         asyncio.create_task(run_investigation_pipeline(error_id))

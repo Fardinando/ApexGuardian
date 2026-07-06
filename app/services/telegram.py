@@ -129,6 +129,31 @@ async def process_telegram_update(update: dict):
     inv_error_id = _get_pending_investigation_from_reply(reply)
     if inv_error_id:
         await _handle_investigation_response(inv_error_id, text)
+        return
+
+    if text and not text.startswith("/") and not reply:
+        await _answer_user_message(text)
+
+
+async def _answer_user_message(text: str):
+    from app.services.ai_client import _call
+    from app.database import get_dashboard_stats
+    stats = get_dashboard_stats()
+    system = (
+        "Você é o ApexGuardian, assistente de gerenciamento de erros do site ApexEnem. "
+        "Responda de forma amigável e técnica. "
+        f"Status atual: {stats['active']} erros ativos, {stats['resolved']} resolvidos."
+    )
+    result = _call([
+        {"role": "system", "content": system},
+        {"role": "user", "content": text},
+    ], max_tokens=1024, temperature=0.7)
+    if result:
+        await send_telegram_message(result)
+    else:
+        await send_telegram_message(
+            "🛡️ Estou online e monitorando! Use /status para ver o estado atual."
+        )
 
 
 def _get_pending_investigation_from_reply(reply: str) -> Optional[int]:
