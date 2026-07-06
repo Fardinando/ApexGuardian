@@ -1,17 +1,29 @@
 from fastapi import APIRouter, HTTPException
 import base64
 import json
+import asyncio
 
 from app.schemas import ReportIn
 from app.database import (
     hash_error, upsert_error_signature, add_user_report, add_log_event,
-    now_iso, get_error_by_hash, get_reports_for_error, update_error_status
+    now_iso, get_error_by_hash, get_reports_for_error, update_error_status,
+    is_maintenance_mode,
 )
 from app.services.vercel_logs import fetch_logs_in_window
 from app.services.telegram import send_telegram_message
 from app.services.pipeline import run_investigation_pipeline
 
 router = APIRouter(prefix="/webhook", tags=["reports"])
+
+_pending_investigations: dict[int, str] = {}
+
+
+def get_pending_investigation(error_id: int) -> str | None:
+    return _pending_investigations.get(error_id)
+
+
+def remove_pending_investigation(error_id: int):
+    _pending_investigations.pop(error_id, None)
 
 
 @router.post("/report")
@@ -52,10 +64,11 @@ async def receive_report(payload: ReportIn):
             "error_id": error["id"],
         }
 
-    if matched_log:
-        update_error_status(error_sig_id, "new")
-        import asyncio
-        asyncio.create_task(run_investigation_pipeline(error_sig_id))
+    if matched_log and not is_maintenance_mode():
+        error_id = error_sig_id
+        update_error_status(error_id, "new")
+        _pending_investigations[error_id] = hash_val
+        asyncio.create_task(_ask_to_investigate(error_id, payload.description))
 
     return {
         "status": "received",
@@ -63,3 +76,16 @@ async def receive_report(payload: ReportIn):
         "error_id": error_sig_id,
         "log_matched": matched_log,
     }
+
+
+async def _ask_to_investigate(error_id: int, description: str):
+    await asyncio.sleep(2)
+    msg = (
+        f"⚠️ *Alerta de Erro — ERROR_ID:{error_id}*\n\n"
+        f"`{description[:300]}`\n\n"
+        f"Deseja que eu investigue este erro?\n\n"
+        f"Responda com:\n"
+        f"✅ \"Sim\" / \"Investigar\" → Iniciar investigação\n"
+        f"❌ \"Não\" / \"Ignorar\" → Arquivar sem investigar"
+    )
+    await send_telegram_message(msg)

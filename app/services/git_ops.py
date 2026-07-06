@@ -56,7 +56,72 @@ def _get_repo_url_with_token() -> str:
     return repo_url
 
 
+async def _apply_supabase_fix(plan: str, error: dict) -> dict | None:
+    import re
+    from app.services.supabase import supabase_update, supabase_insert, supabase_delete, supabase_query, supabase_available
+
+    if not supabase_available():
+        return None
+
+    supabase_actions = re.findall(r'SUPABASE_ACTION:\s*(.*?)(?:\n|$)', plan, re.IGNORECASE)
+    if not supabase_actions:
+        return None
+
+    results = []
+    for action_str in supabase_actions:
+        try:
+            parts = {}
+            for pair in action_str.split(","):
+                kv = pair.strip().split("=", 1)
+                if len(kv) == 2:
+                    parts[kv[0].strip().lower()] = kv[1].strip()
+            table = parts.get("table")
+            action = parts.get("action", "").lower().strip()
+            filter_col = parts.get("filter", "").strip()
+            filter_val = parts.get("values", "").strip()
+            values_str = parts.get("values", "{}").strip()
+
+            if not table:
+                continue
+
+            values = {}
+            if values_str.startswith("{") and values_str.endswith("}"):
+                inner = values_str[1:-1]
+                for item in inner.split(","):
+                    kv = item.strip().split(":", 1)
+                    if len(kv) == 2:
+                        values[kv[0].strip()] = kv[1].strip()
+
+            if action == "update" and filter_col:
+                ok = supabase_update(table, values, (filter_col, filter_val))
+                results.append({"table": table, "action": "update", "success": ok})
+            elif action == "insert":
+                ok = supabase_insert(table, values)
+                results.append({"table": table, "action": "insert", "success": ok})
+            elif action == "delete" and filter_col:
+                ok = supabase_delete(table, (filter_col, filter_val))
+                results.append({"table": table, "action": "delete", "success": ok})
+        except Exception:
+            continue
+
+    if results:
+        return {"applied": True, "actions": results}
+    return None
+
+
 async def apply_fix_and_deploy(error: dict, fix_data: dict) -> dict:
+    plan = fix_data.get("plan", "")
+
+    supabase_result = await _apply_supabase_fix(plan, error)
+    if supabase_result and supabase_result.get("applied"):
+        return {
+            "success": True,
+            "branch": "supabase_only",
+            "preview_url": "N/A (Supabase)",
+            "file_changed": "Supabase data",
+            "supabase_action": supabase_result,
+        }
+
     temp_dir = None
     try:
         temp_dir = tempfile.mkdtemp(prefix="apexguardian_")

@@ -1,4 +1,5 @@
 import json
+import asyncio
 import httpx
 from datetime import datetime
 from typing import Optional
@@ -123,6 +124,44 @@ async def process_telegram_update(update: dict):
 
         action = _classify_feedback(text)
         await handle_fix_feedback(active_fix, action)
+        return
+
+    inv_error_id = _get_pending_investigation_from_reply(reply)
+    if inv_error_id:
+        await _handle_investigation_response(inv_error_id, text)
+
+
+def _get_pending_investigation_from_reply(reply: str) -> Optional[int]:
+    import re
+    match = re.search(r'ERROR_ID[:_]\s*(\d+)', reply)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+async def _handle_investigation_response(error_id: int, text: str):
+    from app.database import update_error_status
+    from app.services.pipeline import run_investigation_pipeline
+    from app.routers.reports import get_pending_investigation, remove_pending_investigation
+    hash_val = get_pending_investigation(error_id)
+    if not hash_val:
+        return
+
+    approve = ["sim", "investigar", "pode investigar", "vai", "ok", "pode ir", "iniciar"]
+    reject = ["não", "nao", "ignorar", "arquivar", "deixa", "deixa quieto", "para"]
+
+    if any(p in text for p in approve):
+        remove_pending_investigation(error_id)
+        await send_telegram_message(f"✅ Investigação do erro #{error_id} iniciada!")
+        asyncio.create_task(run_investigation_pipeline(error_id))
+    elif any(r in text for r in reject):
+        remove_pending_investigation(error_id)
+        update_error_status(error_id, "ignored")
+        await send_telegram_message(f"❌ Erro #{error_id} arquivado sem investigação.")
+    else:
+        await send_telegram_message(
+            f"⚠️ Não entendi. Responda com \"Sim\" para investigar ou \"Não\" para ignorar."
+        )
 
 
 def _get_active_fix_from_reply(reply: str) -> Optional[int]:

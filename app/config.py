@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     turso_db_url: str = ""
     turso_auth_token: str = ""
 
+    # ─── Supabase (correção de dados) ─────────────────────
+    supabase_url: str = ""
+    supabase_key: str = ""
+
     @property
     def database_full_path(self) -> Path:
         return Path(self.database_path).resolve()

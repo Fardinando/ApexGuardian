@@ -54,11 +54,13 @@ async def ping_ollama() -> bool:
         return False
 
 
-SYSTEM_DIAGNOSE = """You are a senior Next.js/React/Vercel expert debugging errors.
-Analyze the error, explain root cause and user impact. Be concise and technical."""
+SYSTEM_DIAGNOSE = """You are a senior Next.js/React/Vercel/Supabase expert debugging errors.
+Analyze the error, explain root cause and user impact. Be concise and technical.
+Consider both code bugs AND Supabase data issues as possible root causes."""
 
 SYSTEM_PLAN = """Create a step-by-step fix plan for this error.
 Be specific about files to change and what to modify.
+If the fix requires Supabase data changes, specify: SUPABASE_ACTION: table=X, action=update, filter=Y, values=Z
 IMPORTANT: Do NOT suggest changes to CSS, styles, design, or layout."""
 
 SYSTEM_CODE_FIX = """Fix the bug in this code.
@@ -67,7 +69,7 @@ Modifique APENAS a lógica do bug, especificamente a linha do erro.
 Retorne APENAS o código corrigido, nada mais."""
 
 SYSTEM_INVESTIGATE = """You are investigating whether this error report is a legitimate bug or a false positive.
-Analyze the stack trace and description.
+Analyze the stack trace and description. Consider both code and Supabase data issues.
 Respond in JSON format:
 {"is_real_bug": true/false, "confidence": 0-100, "reason": "brief explanation"}"""
 
@@ -140,7 +142,9 @@ Diagnosis:
 Web Search Results:
 {search_results[:2000]}
 
-Create a numbered step-by-step fix plan:"""
+Create a numbered step-by-step fix plan.
+If the root cause is in Supabase data, include SUPABASE_ACTION: table=X, action=update, filter=Y, values=Z
+in the relevant step. Otherwise specify which code file to change and how."""
     result = _call([
         {"role": "system", "content": SYSTEM_PLAN},
         {"role": "user", "content": prompt},
