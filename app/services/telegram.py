@@ -136,13 +136,50 @@ async def process_telegram_update(update: dict):
 
 
 async def _answer_user_message(text: str):
+    from app.database import get_dashboard_stats, get_recent_activity, is_maintenance_mode
     from app.services.ai_client import _call
-    from app.database import get_dashboard_stats
     stats = get_dashboard_stats()
+    tl = text.lower()
+
+    if any(p in tl for p in ["status", "como estão as coisas", "o que tem de novo", "resumo"]):
+        mm = "🚧 ativo" if is_maintenance_mode() else "✅ inativo"
+        await send_telegram_message(
+            f"📊 *Resumo do ApexGuardian*\n\n"
+            f"Manutenção: {mm}\n"
+            f"Erros ativos: {stats['active']}\n"
+            f"Resolvidos: {stats['resolved']}\n"
+            f"Em preview: {stats['preview']}\n"
+            f"Ignorados: {stats['ignored']}\n"
+            f"Total: {stats['total']}\n"
+            f"Usuários únicos: {stats['total_users']}"
+        )
+        return
+
+    if any(p in tl for p in ["erro", "erros", "bug", "bugs"]):
+        recent = get_recent_activity(5)
+        lines = "\n".join(
+            f"• #{a['id']} — {a['description'][:80]}"
+            for a in recent
+        ) if recent else "Nenhum erro recente."
+        await send_telegram_message(
+            f"🔍 *Erros recentes:*\n\n{lines}"
+        )
+        return
+
+    if any(p in tl for p in ["quem é você", "quem és", "o que você faz", "ajuda", "help"]):
+        await send_telegram_message(
+            "🛡️ Sou o *ApexGuardian*, assistente do ApexEnem.\n\n"
+            "Monitoro logs da Vercel, detecto warnings e erros, investigo causas e proponho correções.\n\n"
+            "Comandos:\n"
+            "/status — Status completo\n"
+            "/help — Ajuda"
+        )
+        return
+
     system = (
         "Você é o ApexGuardian, assistente de gerenciamento de erros do site ApexEnem. "
-        "Responda de forma amigável e técnica. "
-        f"Status atual: {stats['active']} erros ativos, {stats['resolved']} resolvidos."
+        "Responda de forma amigável e técnica. Seja breve (máx 3 parágrafos). "
+        f"Status: {stats['active']} erros ativos, {stats['resolved']} resolvidos."
     )
     result = _call([
         {"role": "system", "content": system},
@@ -152,7 +189,7 @@ async def _answer_user_message(text: str):
         await send_telegram_message(result)
     else:
         await send_telegram_message(
-            "🛡️ Estou online e monitorando! Use /status para ver o estado atual."
+            "🛡️ Estou online! Use /status para ver tudo, ou me pergunte sobre erros, status, etc."
         )
 
 
