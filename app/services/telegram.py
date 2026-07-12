@@ -136,13 +136,26 @@ async def process_telegram_update(update: dict):
 
 
 async def _answer_user_message(text: str):
+    from app.services.ai_client import chat_with_ai
+
+    result = await chat_with_ai([
+        {"role": "system", "content": (
+            "You are ApexGuardian, a friendly AI assistant that manages errors for the ApexEnem website. "
+            "Answer helpfully and concisely (max 3 paragraphs) in the same language the user wrote in."
+        )},
+        {"role": "user", "content": text},
+    ])
+
+    if result:
+        await send_telegram_message(result)
+        return
+
     try:
         from app.database import get_dashboard_stats, get_recent_activity, is_maintenance_mode
-        from app.services.ai_client import _call
         stats = get_dashboard_stats()
         tl = text.lower()
 
-        if any(p in tl for p in ["status", "como estão as coisas", "o que tem de novo", "resumo"]):
+        if any(p in tl for p in ["status", "resumo"]):
             mm = "🚧 ativo" if is_maintenance_mode() else "✅ inativo"
             await send_telegram_message(
                 f"📊 *Resumo do ApexGuardian*\n\n"
@@ -156,39 +169,27 @@ async def _answer_user_message(text: str):
             )
             return
 
-        if any(p in tl for p in ["quem é você", "quem és", "o que você faz"]):
+        if any(p in tl for p in ["erro", "erros", "bug", "bugs"]):
+            recent = get_recent_activity(5)
+            lines = "\n".join(
+                f"• #{a['id']} — {a['description'][:80]}"
+                for a in recent
+            ) if recent else "Nenhum erro recente."
+            await send_telegram_message(f"🔍 *Erros recentes:*\n\n{lines}")
+            return
+
+        if any(p in tl for p in ["quem é você", "quem és", "o que você faz", "ajuda", "help"]):
             await send_telegram_message(
                 "🛡️ Sou o *ApexGuardian*, assistente do ApexEnem.\n\n"
                 "Monitoro logs da Vercel, detecto warnings e erros, investigo causas e proponho correções.\n\n"
-                "Comandos:\n"
-                "/status — Status completo\n"
-                "/help — Ajuda"
+                "Comandos:\n/status — Status completo\n/help — Ajuda"
             )
             return
 
-        system = (
-            "You are ApexGuardian, a friendly AI assistant that manages errors for the ApexEnem website. "
-            "Answer helpfully and concisely (max 3 paragraphs) in the same language the user wrote in. "
-            f"Current stats: {stats['active']} active errors, {stats['resolved']} resolved."
+        await send_telegram_message(
+            "🛡️ Estou online! A IA está temporariamente indisponível, mas você pode usar "
+            "/status para ver o estado do sistema ou /help para comandos."
         )
-        try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(_call, [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": text},
-                ], 1024, 0.7),
-                timeout=25,
-            )
-        except (asyncio.TimeoutError, Exception):
-            result = None
-
-        if result:
-            await send_telegram_message(result)
-        else:
-            await send_telegram_message(
-                "🛡️ Estou online! Me pergunte sobre status, erros, ou qualquer coisa "
-                "que eu tento ajudar. Se a IA estiver offline, uso respostas padrão."
-            )
     except Exception:
         await send_telegram_message(
             "🛡️ Estou online! Use /status para ver o estado atual."

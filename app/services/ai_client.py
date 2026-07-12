@@ -217,6 +217,51 @@ Is this a real bug or false positive? Respond in JSON."""
     return {"is_real_bug": True, "confidence": 50, "reason": "Fallback: treating as real bug"}
 
 
+async def chat_with_ai(messages: list[dict], timeout: int = 60) -> Optional[str]:
+    """Chat-specific AI call with longer timeout, bypasses internal cache."""
+    import httpx
+
+    if settings.ollama_host:
+        try:
+            url = settings.ollama_host.rstrip("/") + "/v1/chat/completions"
+            body = {
+                "model": settings.ollama_model,
+                "messages": messages,
+                "max_tokens": 1024,
+                "temperature": 0.7,
+            }
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(url, json=body)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return data["choices"][0]["message"]["content"].strip()
+        except Exception:
+            pass
+
+    if settings.ai_api_key:
+        try:
+            url = settings.ai_api_base_url.rstrip("/") + "/chat/completions"
+            body = {
+                "model": settings.ai_model,
+                "messages": messages,
+                "max_tokens": 1024,
+                "temperature": 0.7,
+            }
+            headers = {
+                "Authorization": f"Bearer {settings.ai_api_key}",
+                "Content-Type": "application/json",
+            }
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(url, json=body, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return data["choices"][0]["message"]["content"].strip()
+        except Exception:
+            pass
+
+    return None
+
+
 async def check_ai_health() -> dict:
     ollama_ok = False
     ollama_detail = ""
