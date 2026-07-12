@@ -135,6 +135,13 @@ async def process_telegram_update(update: dict):
             await _handle_investigation_response(inv_error_id, text)
             return
 
+        if not reply and text in ("sim", "não", "nao", "investigar", "ignorar"):
+            from app.routers.reports import get_latest_pending
+            latest = get_latest_pending()
+            if latest is not None:
+                await _handle_investigation_response(latest, text)
+                return
+
         if text and not text.startswith("/") and not reply:
             await _answer_user_message(text)
     except Exception as e:

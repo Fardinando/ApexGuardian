@@ -22,6 +22,12 @@ def get_pending_investigation(error_id: int) -> str | None:
     return _pending_investigations.get(error_id)
 
 
+def get_latest_pending() -> int | None:
+    if not _pending_investigations:
+        return None
+    return list(_pending_investigations.keys())[-1]
+
+
 def remove_pending_investigation(error_id: int):
     _pending_investigations.pop(error_id, None)
 
