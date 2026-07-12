@@ -10,6 +10,11 @@ _fallback_client: Optional[OpenAI] = None
 _ollama_available: Optional[bool] = None
 
 
+def reset_ollama_cache():
+    global _ollama_available
+    _ollama_available = None
+
+
 def _get_ollama_client() -> Optional[OpenAI]:
     global _ollama_client
     if _ollama_client is None and settings.ollama_host:

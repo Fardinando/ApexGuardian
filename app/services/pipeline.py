@@ -8,7 +8,7 @@ from app.database import (
     get_dashboard_stats, now_iso, hash_error, upsert_error_signature,
     is_maintenance_mode,
 )
-from app.services.ai_client import diagnose_error, generate_fix_plan, investigate_error
+from app.services.ai_client import diagnose_error, generate_fix_plan, investigate_error, reset_ollama_cache
 from app.services.search import search_error
 from app.services.telegram import send_error_notification, send_urgent_message, send_simple_message
 
@@ -18,6 +18,8 @@ _active_fixes: dict[int, dict] = {}
 async def run_investigation_pipeline(error_sig_id: int):
     if is_maintenance_mode():
         return
+
+    reset_ollama_cache()
 
     error = get_error_by_id(error_sig_id)
     if not error:
