@@ -80,7 +80,13 @@ async def process_telegram_update(update: dict):
         if chat_id != settings.allowed_telegram_user_id:
             return
 
-        text = (message.get("text") or "").strip().lower()
+        if message.get("from", {}).get("is_bot"):
+            return
+
+        if not message.get("text"):
+            return
+
+        text = message.get("text", "").strip().lower()
         reply = message.get("reply_to_message", {}).get("text", "")
 
         if text == "/start":
