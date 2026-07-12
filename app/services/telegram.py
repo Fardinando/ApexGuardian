@@ -135,7 +135,41 @@ async def process_telegram_update(update: dict):
         await _answer_user_message(text)
 
 
+async def _try_execute_action(text: str) -> bool:
+    import re
+    from app.database import get_error_by_id, get_error_by_hash, update_error_status
+
+    tl = text.lower().strip()
+
+    archive_match = re.search(r'(?:arquiv|archive|arquiv)\w*\s+(?:o\s+)?(?:erro\s+)?#?(\d+)', tl)
+    if archive_match:
+        eid = int(archive_match.group(1))
+        err = get_error_by_id(eid)
+        if err:
+            update_error_status(eid, "archived_no_log")
+            await send_telegram_message(f"✅ Erro #{err['hash']} arquivado com sucesso!")
+        else:
+            await send_telegram_message(f"❌ Erro #{eid} não encontrado.")
+        return True
+
+    reopen_match = re.search(r'(?:reabra|reabrir|reopen)\w*\s+(?:o\s+)?(?:erro\s+)?#?(\d+)', tl)
+    if reopen_match:
+        eid = int(reopen_match.group(1))
+        err = get_error_by_id(eid)
+        if err:
+            update_error_status(eid, "new")
+            await send_telegram_message(f"✅ Erro #{err['hash']} reaberto!")
+        else:
+            await send_telegram_message(f"❌ Erro #{eid} não encontrado.")
+        return True
+
+    return False
+
+
 async def _answer_user_message(text: str):
+    if await _try_execute_action(text):
+        return
+
     from app.services.ai_client import chat_with_ai
 
     result = await chat_with_ai([

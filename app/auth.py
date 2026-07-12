@@ -75,6 +75,7 @@ PERMISSIONS = {
     "operator": {
         "view_dashboard": True,
         "view_errors": True,
+        "archive_errors": True,
         "view_error_detail": True,
         "view_screenshots": True,
         "view_stacktraces": True,
@@ -91,6 +92,7 @@ PERMISSIONS = {
     "analyst": {
         "view_dashboard": True,
         "view_errors": True,
+        "archive_errors": True,
         "view_error_detail": True,
         "view_screenshots": True,
         "view_stacktraces": True,
