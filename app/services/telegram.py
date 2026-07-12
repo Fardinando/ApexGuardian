@@ -138,7 +138,6 @@ async def process_telegram_update(update: dict):
 async def _answer_user_message(text: str):
     try:
         from app.database import get_dashboard_stats, get_recent_activity, is_maintenance_mode
-        from app.services.ai_client import _call
         stats = get_dashboard_stats()
         tl = text.lower()
 
@@ -177,21 +176,29 @@ async def _answer_user_message(text: str):
             )
             return
 
-        system = (
-            "Você é o ApexGuardian, assistente de gerenciamento de erros do site ApexEnem. "
-            "Responda de forma amigável e técnica. Seja breve (máx 3 parágrafos). "
-            f"Status: {stats['active']} erros ativos, {stats['resolved']} resolvidos."
-        )
-        result = _call([
-            {"role": "system", "content": system},
-            {"role": "user", "content": text},
-        ], max_tokens=1024, temperature=0.7)
-        if result:
-            await send_telegram_message(result)
-        else:
+        if any(p in tl for p in ["obrigado", "valeu", "thanks", "brigado"]):
             await send_telegram_message(
-                "🛡️ Estou online! Use /status para ver tudo, ou me pergunte sobre erros, status, etc."
+                "🛡️ Disponha! Qualquer coisa é só chamar. 😊"
             )
+            return
+
+        if any(p in tl for p in ["oi", "olá", "ola", "hey", "bom dia", "boa tarde", "boa noite"]):
+            await send_telegram_message(
+                "🛡️ Olá! Como posso ajudar? Me pergunte sobre *status*, *erros*, ou use /help para comandos."
+            )
+            return
+
+        if any(p in tl for p in ["supabase", "supa", "banco"]):
+            await send_telegram_message(
+                "🛡️ Consigo consultar e corrigir dados no Supabase se configurado. "
+                "Atualmente está " + ("✅ ativo" if settings.supabase_url else "❌ não configurado") + "."
+            )
+            return
+
+        await send_telegram_message(
+            "🛡️ Entendi! Se quiser saber algo específico, pergunte sobre *status*, *erros*, "
+            "ou digite /help para ver todos os comandos."
+        )
     except Exception:
         await send_telegram_message(
             "🛡️ Estou online! Use /status para ver o estado atual."
