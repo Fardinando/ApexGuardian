@@ -190,12 +190,28 @@ async def _answer_user_message(text: str):
         return
 
     from app.services.ai_client import chat_with_ai
+    from app.database import get_dashboard_stats, get_recent_activity, is_maintenance_mode, get_errors_paginated
+
+    stats = get_dashboard_stats()
+    recent_errors = get_errors_paginated(page=1, per_page=10)
+    recent_list = recent_errors["errors"] if isinstance(recent_errors, dict) else recent_errors[:10]
+    errors_summary = "\n".join(
+        f"- #{e['id']} (hash: {e['hash'][:12]}): {e['description'][:100]} — status: {e['status']}"
+        for e in (recent_list or [])
+    ) or "Nenhum erro registrado."
+
+    mm = "ATIVO" if is_maintenance_mode() else "inativo"
+    system_prompt = (
+        "You are ApexGuardian, a friendly AI assistant that manages errors for the ApexEnem website. "
+        "You have access to the error database. Answer helpfully and concisely (max 3 paragraphs) "
+        "in the same language the user wrote in.\n\n"
+        f"System status: maintenance={mm}, {stats['active']} active errors, {stats['resolved']} resolved, "
+        f"{stats['total']} total errors, {stats['total_users']} unique users.\n\n"
+        f"Recent errors:\n{errors_summary}"
+    )
 
     result = await chat_with_ai([
-        {"role": "system", "content": (
-            "You are ApexGuardian, a friendly AI assistant that manages errors for the ApexEnem website. "
-            "Answer helpfully and concisely (max 3 paragraphs) in the same language the user wrote in."
-        )},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": text},
     ])
 
