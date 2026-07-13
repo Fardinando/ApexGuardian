@@ -193,11 +193,10 @@ async def _answer_user_message(text: str):
     from app.database import get_dashboard_stats, get_recent_activity, is_maintenance_mode, get_errors_paginated
 
     stats = get_dashboard_stats()
-    recent_errors = get_errors_paginated(page=1, per_page=10)
-    recent_list = recent_errors["errors"] if isinstance(recent_errors, dict) else recent_errors[:10]
+    recent_errors_list, _ = get_errors_paginated(page=1, per_page=10)
     errors_summary = "\n".join(
         f"- #{e['id']} (hash: {e['hash'][:12]}): {e['description'][:100]} — status: {e['status']}"
-        for e in (recent_list or [])
+        for e in (recent_errors_list or [])
     ) or "Nenhum erro registrado."
 
     mm = "ATIVO" if is_maintenance_mode() else "inativo"
