@@ -220,6 +220,8 @@ Is this a real bug or false positive? Respond in JSON."""
 async def chat_with_ai(messages: list[dict], timeout: int = 60) -> Optional[str]:
     """Chat-specific AI call with longer timeout, bypasses internal cache."""
     import httpx
+    import logging
+    log = logging.getLogger("ai_client")
 
     if settings.ollama_host:
         try:
@@ -230,13 +232,19 @@ async def chat_with_ai(messages: list[dict], timeout: int = 60) -> Optional[str]
                 "max_tokens": 1024,
                 "temperature": 0.7,
             }
+            log.info("Tentando Ollama: %s", url)
             async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(url, json=body)
                 if resp.status_code == 200:
                     data = resp.json()
+                    log.info("Ollama respondeu com sucesso")
                     return data["choices"][0]["message"]["content"].strip()
-        except Exception:
-            pass
+                else:
+                    log.warning("Ollama retornou %d: %s", resp.status_code, resp.text[:200])
+        except httpx.TimeoutException:
+            log.warning("Ollama timeout após %ds", timeout)
+        except Exception as e:
+            log.warning("Ollama erro: %s", e)
 
     if settings.ai_api_key:
         try:
@@ -251,14 +259,23 @@ async def chat_with_ai(messages: list[dict], timeout: int = 60) -> Optional[str]
                 "Authorization": f"Bearer {settings.ai_api_key}",
                 "Content-Type": "application/json",
             }
+            log.info("Tentando fallback: %s", url)
             async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(url, json=body, headers=headers)
                 if resp.status_code == 200:
                     data = resp.json()
+                    log.info("Fallback respondeu com sucesso")
                     return data["choices"][0]["message"]["content"].strip()
-        except Exception:
-            pass
+                else:
+                    log.warning("Fallback retornou %d: %s", resp.status_code, resp.text[:200])
+        except httpx.TimeoutException:
+            log.warning("Fallback timeout após %ds", timeout)
+        except Exception as e:
+            log.warning("Fallback erro: %s", e)
+    else:
+        log.warning("ai_api_key não configurada, sem fallback")
 
+    log.error("Todos os provedores de IA falharam")
     return None
 
 
