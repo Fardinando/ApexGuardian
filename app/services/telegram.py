@@ -6,33 +6,33 @@ from typing import Optional
 
 from app.config import settings
 
-_template = """🛡️ *APEXGUARDIAN - NOVA INTERAÇÃO*
+_template = """🚨 *Erro detectado no ApexEnem*
 
-📌 *Origem:* {origem}
-👥 *Usuários afetados:* {usuarios}
+*Origem:* {origem}
+*Afetando:* {usuarios}
 
-🔍 *Erro Detectado:*
+*O que tá acontecendo:*
 ```
 {erro}
 ```
 
-🧠 *Diagnóstico e Significado:*
+*Meu diagnóstico:*
 {diagnostico}
 
-📋 *Plano de Correção Proposto:*
+*Plano pra resolver:*
 {plano}
 
-📎 *Reprodução (como obter o erro):*
+*Como reproduzir:*
 {reproducao}
 
-🔗 *Link do Deploy Preview:*
+*Preview:*
 {preview_url}
 
 ---
-*Comandos:*
-✅ "Ok" / "Aprovado" -> Publica em Produção.
-❌ "Não gostei" / "Refaça" -> Gera novo plano.
-🔄 "Reverte" / "Deu problema" -> Cancela deploy e deleta branch."""
+Responde com:
+✅ "Ok" — Aprova e publica
+❌ "Não gostei" — Refaz o plano
+🔄 "Reverte" — Cancela e desfaz"""
 
 
 async def send_telegram_message(text: str, parse_mode: str = "Markdown") -> dict:
@@ -91,9 +91,8 @@ async def process_telegram_update(update: dict):
 
         if text == "/start":
             await send_telegram_message(
-                "🛡️ ApexGuardian ativo!\n\n"
-                "Monitore os erros do ApexEnem e gerencie correções.\n"
-                "Use /status para ver o estado atual."
+                "E aí, Fernando! Tô online. 👋\n\n"
+                "Manda a mensagem que eu resolvo. Se quiser ver o status do sistema, é /status."
             )
         elif text == "/status":
             try:
@@ -118,13 +117,13 @@ async def process_telegram_update(update: dict):
                 await send_telegram_message(f"❌ Erro ao obter status: {str(e)}")
         elif text == "/help":
             await send_telegram_message(
-                "Comandos disponíveis:\n"
-                "/status - Status do sistema\n"
-                "/help - Esta mensagem\n\n"
-                "Responda a uma notificação com:\n"
-                "✅ Ok / Aprovado - Avança\n"
-                "❌ Não gostei / Refaça - Novo plano\n"
-                "🔄 Reverte / Deu problema - Rollback"
+                "Bora lá:\n\n"
+                "/status — Resumo do sistema\n"
+                "/help — Isso aqui\n\n"
+                "Outras coisas que rola fazer:\n"
+                "✅ \"Ok\" / \"Aprovado\" — Aprova o fix\n"
+                "❌ \"Não gostei\" / \"Refaça\" — Gera outro plano\n"
+                "🔄 \"Reverte\" / \"Deu problema\" — Faz rollback"
             )
 
         active_fix = _get_active_fix_from_reply(reply)
@@ -166,9 +165,9 @@ async def _try_execute_action(text: str) -> bool:
         err = get_error_by_id(eid)
         if err:
             update_error_status(eid, "archived_no_log")
-            await send_telegram_message(f"✅ Erro #{err['hash']} arquivado com sucesso!")
+            await send_telegram_message(f"Pronto, erro #{err['hash']} arquivado. 👍")
         else:
-            await send_telegram_message(f"❌ Erro #{eid} não encontrado.")
+            await send_telegram_message(f"Erro #{eid} não achei no banco. Verifica o ID.")
         return True
 
     reopen_match = re.search(r'(?:reabra|reabrir|reopen)\w*\s+(?:o\s+)?(?:erro\s+)?#?(\d+)', tl)
@@ -177,9 +176,9 @@ async def _try_execute_action(text: str) -> bool:
         err = get_error_by_id(eid)
         if err:
             update_error_status(eid, "new")
-            await send_telegram_message(f"✅ Erro #{err['hash']} reaberto!")
+            await send_telegram_message(f"Erro #{err['hash']} reaberto! Tá de volta na fila.")
         else:
-            await send_telegram_message(f"❌ Erro #{eid} não encontrado.")
+            await send_telegram_message(f"Erro #{eid} não achei. Confere o ID.")
         return True
 
     return False
@@ -201,12 +200,25 @@ async def _answer_user_message(text: str):
 
     mm = "ATIVO" if is_maintenance_mode() else "inativo"
     system_prompt = (
-        "You are ApexGuardian, a friendly AI assistant that manages errors for the ApexEnem website. "
-        "You have access to the error database. Answer helpfully and concisely (max 3 paragraphs) "
-        "in the same language the user wrote in.\n\n"
-        f"System status: maintenance={mm}, {stats['active']} active errors, {stats['resolved']} resolved, "
-        f"{stats['total']} total errors, {stats['total_users']} unique users.\n\n"
-        f"Recent errors:\n{errors_summary}"
+        "Você é o ApexGuardian — um programador sênior com mais de 15 anos de experiência em desenvolvimento web, "
+        "devops e arquitetura de sistemas. Você trabalha diretamente com o Fernando, o dono do ApexEnem.\n\n"
+        "Personalidade:\n"
+        "- Fale como um humano real, com gírias leves do dia a dia de um dev (tipo 'caramba', 'porra', 'beleza', 'mano').\n"
+        "- Seja direto, mas sem ser grosso. Explica as coisas como se estivesse conversando com um colega de trabalho.\n"
+        "- Usa emojis com moderação, só quando faz sentido (tipo ✅ pra confirmar, 🔥 pra coisa boa).\n"
+        "- Se não sabe algo, admite na hora — programador sênior não inventa resposta.\n"
+        "- Pode usar humor quando apropriado, nada forçado.\n"
+        "- Trata o Fernando como parceiro de trabalho, não como cliente.\n\n"
+        "Estilo de resposta:\n"
+        "- Respostas curtas e diretas (máximo 4-5 linhas).\n"
+        "- Não usa linguagem robótica tipo 'Claro! Posso ajudá-lo com isso!'.\n"
+        "- Se a pergunta é simples, responde simples. Não enrola.\n"
+        "- Se o assunto é sério (erro crítico, produção fora do ar), fala sério.\n"
+        "- Mistura português natural com termos técnicos em inglês quando necessário (tipo 'deploy', 'hotfix', 'rollback').\n\n"
+        f"Status do sistema agora: manutenção={mm}, {stats['active']} erros ativos, {stats['resolved']} resolvidos, "
+        f"{stats['total']} total, {stats['total_users']} usuários únicos.\n\n"
+        f"Erros recentes:\n{errors_summary}\n\n"
+        "Responda em português do Brasil. Se o usuário escrever em inglês, responda em inglês."
     )
 
     result = await chat_with_ai([
@@ -248,19 +260,20 @@ async def _answer_user_message(text: str):
 
         if any(p in tl for p in ["quem é você", "quem és", "o que você faz", "ajuda", "help"]):
             await send_telegram_message(
-                "🛡️ Sou o *ApexGuardian*, assistente do ApexEnem.\n\n"
-                "Monitoro logs da Vercel, detecto warnings e erros, investigo causas e proponho correções.\n\n"
-                "Comandos:\n/status — Status completo\n/help — Ajuda"
+                "Sou o ApexGuardian, mano. Cuido dos erros do ApexEnem — pego os logs da Vercel, "
+                "investigo o que tá quebrado e proponho correções.\n\n"
+                "/status — Resumo rápido\n"
+                "/help — Comandos"
             )
             return
 
         await send_telegram_message(
-            "🛡️ Estou online! A IA está temporariamente indisponível, mas você pode usar "
-            "/status para ver o estado do sistema ou /help para comandos."
+            "Ih, a IA tá fora do ar no momento. 😅\n"
+            "Mas o sistema tá de pé — usa /status pra ver o que rola."
         )
     except Exception:
         await send_telegram_message(
-            "🛡️ Estou online! Use /status para ver o estado atual."
+            "Tô aqui! Usa /status pra ver o estado do sistema."
         )
 
 
@@ -285,15 +298,15 @@ async def _handle_investigation_response(error_id: int, text: str):
 
     if any(p in text for p in approve):
         remove_pending_investigation(error_id)
-        await send_telegram_message(f"✅ Investigação do erro #{error_id} iniciada!")
+        await send_telegram_message(f"Beleza, investigating error #{error_id}... 🔍")
         asyncio.create_task(run_investigation_pipeline(error_id))
     elif any(r in text for r in reject):
         remove_pending_investigation(error_id)
         update_error_status(error_id, "ignored")
-        await send_telegram_message(f"❌ Erro #{error_id} arquivado sem investigação.")
+        await send_telegram_message(f"Certo, erro #{error_id} ignorado. Se mudar de ideia, é só falar.")
     else:
         await send_telegram_message(
-            f"⚠️ Não entendi. Responda com \"Sim\" para investigar ou \"Não\" para ignorar."
+            f"Não entendi. Manda \"Sim\" pra eu investigar ou \"Não\" pra ignorar."
         )
 
 
